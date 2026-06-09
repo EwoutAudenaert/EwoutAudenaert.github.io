@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Skyjo-stijl kaartspel - onofficiële browsergame</title>
+  <style>
+    :root{
+      --bg1:#0f172a; --bg2:#1e293b; --panel:rgba(255,255,255,.10); --panel2:rgba(255,255,255,.15);
+      --text:#f8fafc; --muted:#cbd5e1; --accent:#38bdf8; --good:#4ade80; --bad:#fb7185; --warn:#facc15;
+      --card:#f8fafc; --ink:#111827; --back1:#2563eb; --back2:#7c3aed;
+      --shadow:0 16px 50px rgba(0,0,0,.35); --radius:18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; min-height:100vh; font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background: radial-gradient(circle at 20% 10%, #334155 0, transparent 28%), radial-gradient(circle at 80% 0%, #155e75 0, transparent 28%), linear-gradient(135deg,var(--bg1),var(--bg2));
+      color:var(--text);
+    }
+    .app{max-width:1220px;margin:0 auto;padding:22px;}
+    header{display:flex;gap:16px;justify-content:space-between;align-items:flex-start;margin-bottom:18px;}
+    h1{margin:0;font-size:clamp(1.6rem,3vw,2.6rem);letter-spacing:-.04em;}
+    .subtitle{color:var(--muted);margin:5px 0 0;line-height:1.45;max-width:780px;}
+    .pill{display:inline-flex;align-items:center;gap:8px;padding:9px 12px;border-radius:999px;background:var(--panel);border:1px solid rgba(255,255,255,.18);color:var(--muted);font-weight:650;white-space:nowrap;}
+    .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:14px 0 18px;}
+    button{border:0;border-radius:14px;padding:11px 14px;font-weight:800;cursor:pointer;color:#06111f;background:linear-gradient(135deg,#67e8f9,#38bdf8);box-shadow:0 8px 20px rgba(56,189,248,.22);transition:transform .12s ease,filter .12s ease,opacity .12s ease;}
+    button:hover{transform:translateY(-1px);filter:brightness(1.06)}
+    button:disabled{opacity:.45;cursor:not-allowed;transform:none;filter:saturate(.2)}
+    button.secondary{background:rgba(255,255,255,.12);color:var(--text);box-shadow:none;border:1px solid rgba(255,255,255,.18)}
+    .grid-layout{display:grid;grid-template-columns:1fr 330px;gap:18px;align-items:start;}
+    @media(max-width:960px){.grid-layout{grid-template-columns:1fr}.side{order:-1} header{flex-direction:column}.pill{white-space:normal}}
+    .board-area{display:grid;gap:18px;}
+    .player-panel,.side-card{background:var(--panel);border:1px solid rgba(255,255,255,.16);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;backdrop-filter:blur(10px)}
+    .panel-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px;}
+    .name{font-weight:900;font-size:1.1rem;}
+    .scoreline{display:flex;gap:8px;flex-wrap:wrap;color:var(--muted);font-size:.94rem;}
+    .badge{border-radius:999px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.14);padding:5px 9px;}
+    .badge.turn{background:rgba(74,222,128,.18);color:#bbf7d0;border-color:rgba(74,222,128,.35)}
+    .tableau{display:grid;grid-template-columns:repeat(4,minmax(58px,1fr));gap:10px;}
+    .card{aspect-ratio:3/4;border-radius:13px;border:2px solid rgba(255,255,255,.22);position:relative;display:grid;place-items:center;font-size:clamp(1.35rem,3vw,2.2rem);font-weight:1000;user-select:none;box-shadow:0 10px 22px rgba(0,0,0,.22);overflow:hidden;transition:transform .14s ease, box-shadow .14s ease, outline .14s ease;}
+    .card.face{background:linear-gradient(180deg,var(--card),#dbeafe);color:var(--ink)}
+    .card.hidden{background:linear-gradient(135deg,var(--back1),var(--back2));color:rgba(255,255,255,.9)}
+    .card.hidden:before{content:"";position:absolute;inset:10px;border:2px dashed rgba(255,255,255,.35);border-radius:10px;}
+    .card.removed{background:rgba(255,255,255,.08);border-style:dashed;color:rgba(255,255,255,.25);box-shadow:none;}
+    .card.clickable{cursor:pointer;outline:3px solid transparent;}
+    .card.clickable:hover{transform:translateY(-3px) scale(1.02);box-shadow:0 14px 26px rgba(0,0,0,.30);outline-color:rgba(56,189,248,.65)}
+    .card.selected{outline:4px solid var(--warn)}
+    .card.neg{color:#0369a1}.card.zero{color:#475569}.card.high{color:#be123c}.card.mid{color:#92400e}
+    .mini{font-size:.75rem;position:absolute;top:7px;left:8px;opacity:.7}.card.hidden .mini{display:none}
+    .center{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+    .pile{background:var(--panel2);border:1px solid rgba(255,255,255,.16);border-radius:var(--radius);padding:14px;text-align:center;}
+    .pile h3{margin:0 0 10px;font-size:1rem;color:var(--muted)}
+    .pile-card{width:92px;height:122px;margin:0 auto 12px;}
+    .message{font-size:1rem;line-height:1.45;background:rgba(15,23,42,.58);border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:13px;min-height:74px;}
+    .log{max-height:230px;overflow:auto;padding-right:5px;color:var(--muted);font-size:.92rem;line-height:1.45;}
+    .log p{margin:0 0 8px;border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:8px;}
+    .rules{color:var(--muted);font-size:.93rem;line-height:1.5;}
+    .rules ul{padding-left:20px;margin:8px 0 0;}.rules li{margin:5px 0}
+    .modal{position:fixed;inset:0;background:rgba(2,6,23,.78);display:none;align-items:center;justify-content:center;padding:22px;z-index:10;}
+    .modal.show{display:flex}.modal-box{max-width:680px;background:#0f172a;border:1px solid rgba(255,255,255,.18);border-radius:24px;box-shadow:var(--shadow);padding:24px;}.modal-box h2{margin-top:0}
+    .small{font-size:.86rem;color:var(--muted)}
+    .winner{color:#bbf7d0;font-weight:1000}.danger{color:#fecdd3}.yellow{color:#fef08a}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div>
+        <h1>Skyjo-stijl kaartspel</h1>
+        <p class="subtitle">Onofficiële browserversie met eigen vormgeving. Speel tegen een eenvoudige computer. Doel: eindig met zo weinig mogelijk punten.</p>
+      </div>
+      <div class="pill" id="roundInfo">Ronde 1 · doel: onder 100 punten blijven</div>
+    </header>
+
+    <div class="toolbar">
+      <button id="newGameBtn">Nieuw spel</button>
+      <button id="rulesBtn" class="secondary">Regels tonen</button>
+      <button id="peekBtn" class="secondary">Hint</button>
+    </div>
+
+    <div class="grid-layout">
+      <main class="board-area">
+        <section class="player-panel" id="cpuPanel">
+          <div class="panel-head">
+            <div class="name">Computer</div>
+            <div class="scoreline"><span class="badge" id="cpuTotal">Totaal: 0</span><span class="badge" id="cpuRound">Ronde: ?</span><span class="badge" id="cpuTurnBadge">wacht</span></div>
+          </div>
+          <div class="tableau" id="cpuGrid"></div>
+        </section>
+
+        <section class="center">
+          <div class="pile">
+            <h3>Trekstapel</h3>
+            <div class="card hidden pile-card clickable" id="drawPile"><span>?</span></div>
+            <button id="drawBtn">Trek gesloten kaart</button>
+          </div>
+          <div class="pile">
+            <h3>Aflegstapel</h3>
+            <div class="card face pile-card clickable" id="discardPile"></div>
+            <button id="discardBtn">Neem aflegkaart</button>
+          </div>
+        </section>
+
+        <section class="player-panel" id="humanPanel">
+          <div class="panel-head">
+            <div class="name">Jij</div>
+            <div class="scoreline"><span class="badge" id="humanTotal">Totaal: 0</span><span class="badge" id="humanRound">Ronde: ?</span><span class="badge" id="humanTurnBadge">jouw beurt</span></div>
+          </div>
+          <div class="tableau" id="humanGrid"></div>
+        </section>
+      </main>
+
+      <aside class="side">
+        <div class="side-card">
+          <h2 style="margin:0 0 10px">Actie</h2>
+          <div class="message" id="message"></div>
+          <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
+            <button id="keepDrawnBtn" disabled>Gebruik getrokken kaart</button>
+            <button id="throwDrawnBtn" class="secondary" disabled>Gooi weg en draai kaart om</button>
+          </div>
+        </div>
+        <div class="side-card" style="margin-top:18px">
+          <h2 style="margin:0 0 10px">Logboek</h2>
+          <div class="log" id="log"></div>
+        </div>
+        <div class="side-card rules" style="margin-top:18px">
+          <strong>Mini-regels</strong>
+          <ul>
+            <li>Neem de bovenste aflegkaart of trek blind.</li>
+            <li>Een getrokken kaart mag je ruilen of weggooien. Gooi je ze weg, dan draai je één verborgen kaart open.</li>
+            <li>Drie gelijke open kaarten in één kolom verdwijnen.</li>
+            <li>Wanneer iemand alles open heeft, krijgt de andere speler nog één beurt.</li>
+          </ul>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <div class="modal" id="rulesModal">
+    <div class="modal-box">
+      <h2>Regels van deze browserversie</h2>
+      <p>Deze versie volgt de kernregels: 12 kaarten per speler in een raster van 3 rijen en 4 kolommen, twee kaarten open bij de start, trek van de gesloten stapel of neem de open aflegkaart, ruil of onthul, en tel na de ronde de zichtbare en verborgen waarden op.</p>
+      <p>De speciale kolomregel is actief: drie gelijke open kaarten in een verticale kolom worden verwijderd en tellen niet mee. Als de speler die de ronde sluit niet strikt de laagste rondescore heeft, wordt zijn positieve rondescore verdubbeld.</p>
+      <p class="small">Dit is een fan-made, educatieve implementatie zonder officiële Skyjo-illustraties, logo’s of assets.</p>
+      <button id="closeRulesBtn">Sluiten</button>
+    </div>
+  </div>
+
+  <script>
+    const VALUES = [-2,-1,0,1,2,3,4,5,6,7,8,9,10,11,12];
+    const COUNTS = {'-2':5,'-1':10,'0':15,'1':10,'2':10,'3':10,'4':10,'5':10,'6':10,'7':10,'8':10,'9':10,'10':10,'11':10,'12':10};
+    const state = { deck:[], discard:[], players:[], current:0, phase:'choosePile', drawn:null, drawnFrom:null, round:1, finalTurns:false, closer:null, gameOver:false };
+    const $ = id => document.getElementById(id);
+
+    function makeDeck(){
+      const d=[]; for(const v of VALUES){ for(let i=0;i<COUNTS[v];i++) d.push(v); }
+      for(let i=d.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [d[i],d[j]]=[d[j],d[i]]; }
+      return d;
+    }
+    function startGame(){ state.players=[newPlayer('Jij',false),newPlayer('Computer',true)]; state.round=1; state.gameOver=false; startRound(true); }
+    function newPlayer(name,cpu){ return {name,cpu,total:0,cards:[],started:false}; }
+    function startRound(first=false){
+      state.deck=makeDeck(); state.discard=[]; state.drawn=null; state.drawnFrom=null; state.phase='choosePile'; state.finalTurns=false; state.closer=null;
+      for(const p of state.players){ p.cards=[]; for(let i=0;i<12;i++) p.cards.push({value:state.deck.pop(), revealed:false, removed:false}); revealRandomTwo(p); }
+      state.discard.push(state.deck.pop());
+      if(first){ const sums=state.players.map(p=>p.cards.filter(c=>c.revealed).reduce((a,c)=>a+c.value,0)); state.current = sums[1] > sums[0] ? 1 : 0; }
+      else { state.current = state.closer ?? 0; }
+      log(`Ronde ${state.round} gestart.`); render();
+      if(currentPlayer().cpu) setTimeout(cpuTurn,700); else setMessage('Jij bent aan zet. Kies de aflegstapel of trek een gesloten kaart.');
+    }
+    function revealRandomTwo(p){ let idx=[...Array(12).keys()]; idx.sort(()=>Math.random()-.5); p.cards[idx[0]].revealed=true; p.cards[idx[1]].revealed=true; }
+    function currentPlayer(){ return state.players[state.current]; }
+    function topDiscard(){ return state.discard[state.discard.length-1]; }
+    function drawDeckCard(){ if(state.deck.length===0) recycleDiscard(); return state.deck.pop(); }
+    function recycleDiscard(){ const top=state.discard.pop(); state.deck=state.discard; state.discard=[top]; for(let i=state.deck.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [state.deck[i],state.deck[j]]=[state.deck[j],state.deck[i]]; } }
+    function visibleRoundScore(p){ return p.cards.filter(c=>!c.removed && c.revealed).reduce((a,c)=>a+c.value,0); }
+    function fullRoundScore(p){ return p.cards.filter(c=>!c.removed).reduce((a,c)=>a+c.value,0); }
+    function allOpen(p){ return p.cards.every(c=>c.removed || c.revealed); }
+    function cardClass(v){ if(v<0) return 'neg'; if(v===0) return 'zero'; if(v>=8) return 'high'; return 'mid'; }
+    function cardHTML(c, clickable=false, selected=false, hideValue=false){
+      if(c.removed) return `<div class="card removed"><span>×</span></div>`;
+      const face = c.revealed && !hideValue;
+      return `<div class="card ${face?'face '+cardClass(c.value):'hidden'} ${clickable?'clickable':''} ${selected?'selected':''}">${face?`<span class="mini">punten</span><span>${c.value}</span>`:'<span>?</span>'}</div>`;
+    }
+    function render(){
+      $('roundInfo').textContent=`Ronde ${state.round} · ${state.deck.length} kaarten in trekstapel`;
+      $('humanTotal').textContent=`Totaal: ${state.players[0].total}`; $('cpuTotal').textContent=`Totaal: ${state.players[1].total}`;
+      $('humanRound').textContent=`Ronde: ${visibleRoundScore(state.players[0])}`; $('cpuRound').textContent=`Ronde: ${visibleRoundScore(state.players[1])}`;
+      $('humanTurnBadge').textContent = state.current===0 && !state.gameOver ? 'jouw beurt' : 'wacht'; $('cpuTurnBadge').textContent = state.current===1 && !state.gameOver ? 'computer denkt' : 'wacht';
+      $('humanTurnBadge').className='badge '+(state.current===0&&!state.gameOver?'turn':''); $('cpuTurnBadge').className='badge '+(state.current===1&&!state.gameOver?'turn':'');
+      renderGrid('humanGrid', state.players[0], false); renderGrid('cpuGrid', state.players[1], true);
+      $('discardPile').innerHTML=`<span class="mini">afleg</span><span>${topDiscard()}</span>`; $('discardPile').className=`card face pile-card clickable ${cardClass(topDiscard())}`;
+      const humanTurn = state.current===0 && !state.gameOver;
+      $('drawBtn').disabled=!humanTurn || state.phase!=='choosePile'; $('discardBtn').disabled=!humanTurn || state.phase!=='choosePile';
+      $('keepDrawnBtn').disabled=!humanTurn || state.phase!=='drawn'; $('throwDrawnBtn').disabled=!humanTurn || state.phase!=='drawn' || state.drawnFrom==='discard';
+    }
+    function renderGrid(id,p,hide){
+      const grid=$(id); grid.innerHTML='';
+      p.cards.forEach((c,i)=>{ const clickable = state.current===0 && !state.gameOver && ((state.phase==='replace' || state.phase==='reveal') && !c.removed && (state.phase==='replace' || !c.revealed)); const wrap=document.createElement('div'); wrap.innerHTML=cardHTML(c,clickable,false,hide && !state.gameOver); const el=wrap.firstChild; if(clickable) el.onclick=()=>humanChooseCard(i); grid.appendChild(el); });
+    }
+    function setMessage(t){ $('message').innerHTML=t; }
+    function log(t){ const p=document.createElement('p'); p.innerHTML=t; $('log').prepend(p); }
+    function humanDrawClosed(){ if(state.phase!=='choosePile'||state.current!==0) return; state.drawn=drawDeckCard(); state.drawnFrom='deck'; state.phase='drawn'; setMessage(`Je trok <strong>${state.drawn}</strong>. Gebruik de kaart om te ruilen, of gooi ze weg en draai een verborgen kaart open.`); render(); }
+    function humanTakeDiscard(){ if(state.phase!=='choosePile'||state.current!==0) return; state.drawn=state.discard.pop(); state.drawnFrom='discard'; state.phase='replace'; setMessage(`Je neemt <strong>${state.drawn}</strong> van de aflegstapel. Kies een kaart in je raster om te vervangen.`); render(); }
+    function humanKeepDrawn(){ if(state.phase!=='drawn') return; state.phase='replace'; setMessage(`Kies een kaart in je raster om te vervangen door <strong>${state.drawn}</strong>.`); render(); }
+    function humanThrowDrawn(){ if(state.phase!=='drawn'||state.drawnFrom!=='deck') return; state.discard.push(state.drawn); log(`Jij gooide ${state.drawn} weg.`); state.drawn=null; state.phase='reveal'; setMessage('Kies één verborgen kaart om open te draaien.'); render(); }
+    function humanChooseCard(i){ const p=state.players[0]; if(state.phase==='replace'){ replaceCard(p,i,state.drawn); log(`Jij verving een kaart door ${state.drawn}.`); state.drawn=null; finishTurn(); } else if(state.phase==='reveal'){ p.cards[i].revealed=true; log(`Jij draaide ${p.cards[i].value} open.`); finishTurn(); } }
+    function replaceCard(p,i,newVal){ const old=p.cards[i]; state.discard.push(old.value); p.cards[i]={value:newVal,revealed:true,removed:false}; checkColumns(p); }
+    function checkColumns(p){
+      for(let col=0;col<4;col++){
+        const inds=[col,col+4,col+8]; const cs=inds.map(i=>p.cards[i]);
+        if(cs.every(c=>!c.removed && c.revealed) && cs[0].value===cs[1].value && cs[1].value===cs[2].value){
+          for(const i of inds){ p.cards[i].removed=true; state.discard.push(p.cards[i].value); }
+          log(`<span class="yellow">${p.name} verwijderde een kolom met drie ${cs[0].value}'en.</span>`);
+        }
+      }
+    }
+    function finishTurn(){
+      const p=currentPlayer(); checkColumns(p);
+      if(allOpen(p) && !state.finalTurns){ state.finalTurns=true; state.closer=state.current; log(`<strong>${p.name} heeft alles open. De andere speler krijgt nog één beurt.</strong>`); state.current=1-state.current; state.phase='choosePile'; render(); if(currentPlayer().cpu) setTimeout(cpuTurn,900); else setMessage('Laatste beurt! Kies een actie.'); return; }
+      if(state.finalTurns && state.current!==state.closer){ endRound(); return; }
+      state.current=1-state.current; state.phase='choosePile'; render(); if(currentPlayer().cpu) setTimeout(cpuTurn,900); else setMessage('Jij bent aan zet. Kies de aflegstapel of trek een gesloten kaart.');
+    }
+    function cpuTurn(){ if(state.current!==1||state.gameOver) return; const p=state.players[1];
+      const visibleHigh = p.cards.map((c,i)=>({c,i})).filter(x=>!x.c.removed && x.c.revealed).sort((a,b)=>b.c.value-a.c.value)[0];
+      const hidden = p.cards.map((c,i)=>({c,i})).filter(x=>!x.c.removed && !x.c.revealed);
+      const discard=topDiscard();
+      if(discard<=4 || (visibleHigh && discard < visibleHigh.c.value-1)){
+        state.drawn=state.discard.pop(); const target = chooseCpuReplaceIndex(p,state.drawn); replaceCard(p,target,state.drawn); log(`Computer nam ${state.drawn} van de aflegstapel en ruilde een kaart.`); state.drawn=null; finishTurn(); return;
+      }
+      const drawn=drawDeckCard();
+      if(drawn<=3 || (visibleHigh && drawn < visibleHigh.c.value)){
+        const target=chooseCpuReplaceIndex(p,drawn); replaceCard(p,target,drawn); log(`Computer trok ${drawn} en gebruikte die kaart.`);
+      } else {
+        state.discard.push(drawn); let pick;
+        if(hidden.length) pick=hidden[Math.floor(Math.random()*hidden.length)].i; else pick=visibleHigh.i;
+        p.cards[pick].revealed=true; log(`Computer trok ${drawn}, gooide die weg en draaide een kaart open.`);
+      }
+      finishTurn();
+    }
+    function chooseCpuReplaceIndex(p,val){
+      const candidates=p.cards.map((c,i)=>({c,i})).filter(x=>!x.c.removed);
+      const visible=candidates.filter(x=>x.c.revealed).sort((a,b)=>b.c.value-a.c.value);
+      const hidden=candidates.filter(x=>!x.c.revealed);
+      if(visible[0] && visible[0].c.value > val) return visible[0].i;
+      if(hidden.length) return hidden[Math.floor(Math.random()*hidden.length)].i;
+      return visible[0].i;
+    }
+    function endRound(){
+      state.gameOver=true; for(const p of state.players){ p.cards.forEach(c=>{ if(!c.removed)c.revealed=true; }); checkColumns(p); }
+      let scores=state.players.map(fullRoundScore);
+      if(state.closer!==null){ const closerScore=scores[state.closer]; const minOther=Math.min(...scores.filter((_,i)=>i!==state.closer)); if(closerScore>=minOther && closerScore>0){ scores[state.closer]*=2; log(`<span class="danger">${state.players[state.closer].name} sloot de ronde maar had niet de laagste score: score verdubbeld.</span>`); } }
+      state.players.forEach((p,i)=>p.total+=scores[i]);
+      log(`<strong>Ronde voorbij:</strong> Jij ${scores[0]} punten, Computer ${scores[1]} punten.`);
+      render();
+      const over=state.players.some(p=>p.total>=100);
+      if(over){ const winner = state.players[0].total <= state.players[1].total ? 'Jij wint!' : 'Computer wint.'; setMessage(`<span class="winner">Spel voorbij. ${winner}</span><br>Totalscore: jij ${state.players[0].total}, computer ${state.players[1].total}.`); }
+      else { state.round++; setMessage(`Ronde voorbij. Jij kreeg <strong>${scores[0]}</strong>, computer <strong>${scores[1]}</strong>. <button onclick="startRound(false)">Volgende ronde</button>`); }
+    }
+    function hint(){ const p=state.players[0]; const high=p.cards.filter(c=>!c.removed&&c.revealed).sort((a,b)=>b.value-a.value)[0]; const hidden=p.cards.filter(c=>!c.removed&&!c.revealed).length; const tip = high ? `Je hoogste open kaart is ${high.value}. Lage aflegkaarten zijn meestal goed om daarmee te ruilen.` : 'Je hebt vooral verborgen kaarten. Probeer slechte getrokken kaarten weg te gooien en verborgen kaarten open te draaien.'; setMessage(`${tip}<br>Verborgen kaarten over: <strong>${hidden}</strong>. Aflegkaart: <strong>${topDiscard()}</strong>.`); }
+    $('newGameBtn').onclick=startGame; $('drawBtn').onclick=humanDrawClosed; $('discardBtn').onclick=humanTakeDiscard; $('keepDrawnBtn').onclick=humanKeepDrawn; $('throwDrawnBtn').onclick=humanThrowDrawn; $('peekBtn').onclick=hint;
+    $('rulesBtn').onclick=()=> $('rulesModal').classList.add('show'); $('closeRulesBtn').onclick=()=> $('rulesModal').classList.remove('show'); $('rulesModal').onclick=e=>{ if(e.target.id==='rulesModal') $('rulesModal').classList.remove('show'); };
+    startGame();
+  </script>
+</body>
+</html>
