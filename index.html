@@ -1,0 +1,846 @@
+<!-- public/index.html -->
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Skyjo Multiplayer</title>
+
+  <style>
+    :root {
+      --bg: #151a2d;
+      --panel: #202744;
+      --panel2: #2c3558;
+      --card: #f8f1dc;
+      --back: #5666d6;
+      --accent: #ffd166;
+      --text: #f7f7ff;
+      --muted: #aeb7d8;
+      --shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+      --w: min(1180px, 98vw);
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, #2e3b73 0, transparent 32%),
+        radial-gradient(circle at bottom right, #42275f 0, transparent 35%),
+        var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    .game {
+      width: var(--w);
+      padding: 12px;
+      display: grid;
+      grid-template-columns: 1fr 190px 1fr;
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .player {
+      background: rgba(32, 39, 68, 0.88);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 12px;
+      min-width: 0;
+      transition: transform 0.2s ease, outline 0.2s ease;
+    }
+
+    .player.turn {
+      outline: 4px solid var(--accent);
+      transform: translateY(-3px);
+    }
+
+    .player.mine {
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35), 0 0 28px rgba(96, 211, 148, 0.35);
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .name {
+      font-weight: 800;
+      font-size: 18px;
+    }
+
+    .badge {
+      background: var(--panel2);
+      border-radius: 999px;
+      padding: 6px 10px;
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .badge.active {
+      background: var(--accent);
+      color: #221900;
+      animation: pulse 1s infinite alternate;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .card {
+      height: clamp(58px, 10vw, 90px);
+      border-radius: 13px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: clamp(22px, 4vw, 38px);
+      font-weight: 900;
+      color: #1a1a1a;
+      background: var(--card);
+      cursor: pointer;
+      position: relative;
+      transform-style: preserve-3d;
+      transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease,
+        opacity 0.22s ease,
+        filter 0.18s ease;
+      box-shadow: 0 7px 0 rgba(0, 0, 0, 0.22);
+      border: 2px solid rgba(255, 255, 255, 0.45);
+    }
+
+    .card:hover {
+      transform: translateY(-5px) scale(1.03);
+      box-shadow: 0 13px 0 rgba(0, 0, 0, 0.2);
+      z-index: 4;
+    }
+
+    .card.hidden {
+      color: transparent;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.18) 25%, transparent 25%) 0 0 / 18px 18px,
+        linear-gradient(315deg, rgba(255,255,255,0.18) 25%, transparent 25%) 0 0 / 18px 18px,
+        var(--back);
+    }
+
+    .card.hidden::after {
+      content: "?";
+      color: white;
+      opacity: 0.9;
+      font-size: 28px;
+      text-shadow: 0 3px 8px rgba(0,0,0,0.35);
+    }
+
+    .card.removed {
+      opacity: 0.12;
+      pointer-events: none;
+      filter: grayscale(1);
+      transform: scale(0.82);
+      box-shadow: none;
+    }
+
+    .card.selected {
+      outline: 4px solid var(--accent);
+      animation: bounce 0.65s infinite alternate;
+    }
+
+    .card.negative,
+    .miniCard.negative,
+    .flyingCard.negative {
+      background: #b5f5d1;
+    }
+
+    .card.low,
+    .miniCard.low,
+    .flyingCard.low {
+      background: #d8f7c5;
+    }
+
+    .card.mid,
+    .miniCard.mid,
+    .flyingCard.mid {
+      background: #fff3bf;
+    }
+
+    .card.high,
+    .miniCard.high,
+    .flyingCard.high {
+      background: #ffb3b3;
+    }
+
+    .center {
+      background: rgba(20, 26, 48, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .roomBox {
+      display: grid;
+      gap: 8px;
+    }
+
+    input {
+      width: 100%;
+      border: 0;
+      border-radius: 10px;
+      padding: 9px;
+      background: #11172c;
+      color: white;
+      outline: 2px solid rgba(255,255,255,0.08);
+      font-weight: 700;
+    }
+
+    .piles {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .pileWrap {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .pileLabel {
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .pile {
+      width: 78px;
+      height: 108px;
+      border-radius: 14px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      font-weight: 900;
+      font-size: 34px;
+      box-shadow: 0 10px 0 rgba(0, 0, 0, 0.25);
+      border: 2px solid rgba(255, 255, 255, 0.35);
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .pile:hover {
+      transform: translateY(-6px) rotate(-2deg);
+      box-shadow: 0 16px 0 rgba(0, 0, 0, 0.22);
+    }
+
+    .deck {
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.18) 25%, transparent 25%) 0 0 / 18px 18px,
+        linear-gradient(315deg, rgba(255,255,255,0.18) 25%, transparent 25%) 0 0 / 18px 18px,
+        #6977ff;
+      color: white;
+    }
+
+    .discard {
+      background: var(--card);
+      color: #111;
+    }
+
+    .pile.usable {
+      outline: 4px solid var(--accent);
+      animation: glow 0.9s infinite alternate;
+    }
+
+    .drawn {
+      height: 100px;
+      border-radius: 16px;
+      background: var(--panel2);
+      border: 2px dashed rgba(255, 255, 255, 0.25);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      color: var(--muted);
+      padding: 10px;
+      font-size: 14px;
+      grid-column: span 2;
+    }
+
+    .drawn .miniCard {
+      width: 70px;
+      height: 92px;
+      border-radius: 13px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #111;
+      font-size: 34px;
+      font-weight: 900;
+      box-shadow: 0 8px 0 rgba(0, 0, 0, 0.25);
+      cursor: pointer;
+      animation: dealIn 0.28s ease both;
+      border: 2px solid rgba(255,255,255,0.45);
+    }
+
+    .status {
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 14px;
+      padding: 10px;
+      min-height: 92px;
+      line-height: 1.35;
+      font-size: 14px;
+      color: #e8ecff;
+    }
+
+    .buttons {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-top: auto;
+    }
+
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: var(--accent);
+      color: #221900;
+      font-weight: 900;
+      cursor: pointer;
+      transition: transform 0.16s ease, filter 0.16s ease;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.05);
+    }
+
+    .small {
+      background: #3b466f;
+      color: white;
+    }
+
+    .scoreLine {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .scoreLine strong {
+      color: white;
+    }
+
+    .flyingCard {
+      position: fixed;
+      z-index: 9999;
+      width: 70px;
+      height: 92px;
+      border-radius: 13px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 34px;
+      font-weight: 900;
+      color: #111;
+      background: var(--card);
+      border: 2px solid rgba(255,255,255,0.45);
+      box-shadow: 0 14px 25px rgba(0,0,0,0.35);
+      pointer-events: none;
+      transition:
+        transform 0.46s cubic-bezier(.2,.9,.2,1),
+        opacity 0.46s ease;
+    }
+
+    .swap {
+      animation: swap 0.35s ease;
+    }
+
+    .shake {
+      animation: shake 0.28s ease;
+    }
+
+    @keyframes pulse {
+      from { transform: scale(1); }
+      to { transform: scale(1.05); }
+    }
+
+    @keyframes glow {
+      from { box-shadow: 0 10px 0 rgba(0,0,0,0.25), 0 0 0 rgba(255,209,102,0); }
+      to { box-shadow: 0 10px 0 rgba(0,0,0,0.25), 0 0 22px rgba(255,209,102,0.75); }
+    }
+
+    @keyframes bounce {
+      from { transform: translateY(-3px); }
+      to { transform: translateY(-9px); }
+    }
+
+    @keyframes dealIn {
+      from { transform: translateY(-25px) scale(0.8) rotate(-8deg); opacity: 0; }
+      to { transform: translateY(0) scale(1) rotate(0); opacity: 1; }
+    }
+
+    @keyframes swap {
+      0% { transform: scale(1) rotate(0); }
+      50% { transform: scale(1.18) rotate(5deg); }
+      100% { transform: scale(1) rotate(0); }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-6px); }
+      75% { transform: translateX(6px); }
+    }
+
+    @media (max-width: 850px) {
+      body {
+        align-items: flex-start;
+        overflow-y: auto;
+      }
+
+      .game {
+        grid-template-columns: 1fr;
+        padding: 8px;
+      }
+
+      .center {
+        order: -1;
+      }
+
+      .piles {
+        grid-template-columns: repeat(2, 1fr);
+        align-items: end;
+      }
+
+      .pile {
+        width: 68px;
+        height: 92px;
+        font-size: 28px;
+      }
+
+      .drawn {
+        height: 88px;
+      }
+
+      .drawn .miniCard {
+        width: 58px;
+        height: 76px;
+        font-size: 28px;
+      }
+
+      .board {
+        gap: 6px;
+      }
+
+      .card {
+        height: 60px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="game">
+    <section class="player" id="leftPanel">
+      <div class="header">
+        <div class="name">Speler links</div>
+        <div class="badge" id="leftBadge">offline</div>
+      </div>
+      <div class="board" id="leftBoard"></div>
+    </section>
+
+    <section class="center">
+      <div class="roomBox">
+        <input id="roomInput" placeholder="kamernaam" />
+        <button id="joinBtn">Join kamer</button>
+      </div>
+
+      <div class="piles">
+        <div class="pileWrap">
+          <div class="pileLabel">Trekstapel</div>
+          <div class="pile deck" id="deckPile">★</div>
+        </div>
+
+        <div class="pileWrap">
+          <div class="pileLabel">Afleg</div>
+          <div class="pile discard" id="discardPile">?</div>
+        </div>
+
+        <div class="drawn" id="drawnBox">Join eerst een kamer.</div>
+      </div>
+
+      <div class="scoreLine">
+        <span>Links: <strong id="leftScore">0</strong></span>
+        <span>Rechts: <strong id="rightScore">0</strong></span>
+      </div>
+
+      <div class="status" id="status">Open dezelfde link op twee pc's en join dezelfde kamer.</div>
+
+      <div class="buttons">
+        <button id="newGameBtn">Nieuw spel</button>
+        <button class="small" id="copyBtn">Kopieer kamerlink</button>
+      </div>
+    </section>
+
+    <section class="player" id="rightPanel">
+      <div class="header">
+        <div class="name">Speler rechts</div>
+        <div class="badge" id="rightBadge">offline</div>
+      </div>
+      <div class="board" id="rightBoard"></div>
+    </section>
+  </main>
+
+  <script>
+    const leftBoard = document.getElementById("leftBoard");
+    const rightBoard = document.getElementById("rightBoard");
+    const leftPanel = document.getElementById("leftPanel");
+    const rightPanel = document.getElementById("rightPanel");
+    const deckPile = document.getElementById("deckPile");
+    const discardPile = document.getElementById("discardPile");
+    const drawnBox = document.getElementById("drawnBox");
+    const statusBox = document.getElementById("status");
+    const leftScoreEl = document.getElementById("leftScore");
+    const rightScoreEl = document.getElementById("rightScore");
+    const leftBadge = document.getElementById("leftBadge");
+    const rightBadge = document.getElementById("rightBadge");
+    const roomInput = document.getElementById("roomInput");
+    const joinBtn = document.getElementById("joinBtn");
+    const newGameBtn = document.getElementById("newGameBtn");
+    const copyBtn = document.getElementById("copyBtn");
+
+    let ws = null;
+    let state = null;
+    let yourIndex = null;
+    let joined = false;
+    let locked = false;
+    let previousState = null;
+
+    const params = new URLSearchParams(location.search);
+    roomInput.value = params.get("room") || randomRoomName();
+
+    function randomRoomName() {
+      return Math.random().toString(36).slice(2, 8).toUpperCase();
+    }
+
+    function connect() {
+      if (ws && ws.readyState === WebSocket.OPEN) return;
+
+      const room = roomInput.value.trim() || "default";
+      const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+
+      ws = new WebSocket(`${protocol}//${location.host}`);
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({
+          type: "join",
+          room
+        }));
+
+        const url = new URL(location.href);
+        url.searchParams.set("room", room);
+        history.replaceState(null, "", url);
+      };
+
+      ws.onmessage = event => {
+        const data = JSON.parse(event.data);
+
+        if (data.type === "joined") {
+          joined = true;
+          yourIndex = data.playerIndex;
+
+          statusBox.textContent = yourIndex === 0
+            ? "Jij bent speler links. Geef de kamerlink aan de tweede speler."
+            : "Jij bent speler rechts.";
+        }
+
+        if (data.type === "state") {
+          previousState = state;
+          state = data.state;
+          yourIndex = state.yourIndex;
+          render();
+        }
+
+        if (data.type === "error") {
+          statusBox.textContent = data.message;
+        }
+      };
+
+      ws.onclose = () => {
+        joined = false;
+        statusBox.textContent = "Verbinding verbroken. Klik opnieuw op Join kamer.";
+      };
+    }
+
+    function sendAction(action) {
+      if (!joined || !ws || ws.readyState !== WebSocket.OPEN || locked) return;
+
+      ws.send(JSON.stringify({
+        type: "action",
+        action
+      }));
+    }
+
+    function render() {
+      if (!state) return;
+
+      renderBoard(leftBoard, state.players[0], 0);
+      renderBoard(rightBoard, state.players[1], 1);
+
+      discardPile.textContent = state.discardTop ?? "?";
+      discardPile.className = "pile discard " + valueClass(state.discardTop ?? 0);
+      deckPile.textContent = state.deckCount > 0 ? "★" : "↻";
+
+      const yourTurn = state.current === yourIndex && !state.gameOver;
+      const canUsePile = yourTurn && state.phase === "choosePile";
+
+      deckPile.classList.toggle("usable", canUsePile);
+      discardPile.classList.toggle("usable", canUsePile);
+
+      leftBadge.textContent = badgeText(0);
+      rightBadge.textContent = badgeText(1);
+
+      leftBadge.classList.toggle("active", state.current === 0 && !state.gameOver);
+      rightBadge.classList.toggle("active", state.current === 1 && !state.gameOver);
+
+      leftPanel.classList.toggle("turn", state.current === 0 && !state.gameOver);
+      rightPanel.classList.toggle("turn", state.current === 1 && !state.gameOver);
+
+      leftPanel.classList.toggle("mine", yourIndex === 0);
+      rightPanel.classList.toggle("mine", yourIndex === 1);
+
+      leftScoreEl.textContent = state.players[0].visibleScore;
+      rightScoreEl.textContent = state.players[1].visibleScore;
+
+      if (state.drawnCard === null) {
+        drawnBox.innerHTML = state.phase === "choosePile"
+          ? yourTurn
+            ? "Jouw beurt: klik op een stapel."
+            : "Wacht op de andere speler."
+          : "Kies een kaart.";
+      } else {
+        drawnBox.innerHTML = `<div class="miniCard ${valueClass(state.drawnCard)}" id="drawnMini">${state.drawnCard}</div>`;
+
+        const mini = document.getElementById("drawnMini");
+        mini.onclick = () => {
+          if (yourTurn && state.phase === "replaceWithDrawn" && !state.tookDiscard) {
+            animateFromTo(mini, discardPile, state.drawnCard, true, () => {
+              sendAction({ type: "discardDrawn" });
+            });
+          }
+        };
+      }
+
+      statusBox.textContent = state.message;
+    }
+
+    function badgeText(index) {
+      if (yourIndex === index && state.current === index && !state.gameOver) return "jij - aan zet";
+      if (yourIndex === index) return "jij";
+      if (state.current === index && !state.gameOver) return "aan zet";
+      return "wachten";
+    }
+
+    function renderBoard(root, player, playerIndex) {
+      root.innerHTML = "";
+
+      player.board.forEach((card, index) => {
+        const el = document.createElement("div");
+        el.className = "card";
+        el.dataset.playerIndex = playerIndex;
+        el.dataset.cardIndex = index;
+
+        if (card.removed) {
+          el.classList.add("removed");
+          el.textContent = "";
+        } else if (!card.open) {
+          el.classList.add("hidden");
+          el.textContent = "";
+        } else {
+          el.textContent = card.value;
+          el.classList.add(valueClass(card.value));
+        }
+
+        if (
+          playerIndex === yourIndex &&
+          playerIndex === state.current &&
+          !state.gameOver &&
+          (
+            state.phase === "replaceWithDrawn" ||
+            state.phase === "replaceWithDiscard" ||
+            state.phase === "revealAfterDiscard"
+          ) &&
+          !card.removed
+        ) {
+          el.classList.add("selected");
+        }
+
+        el.onclick = () => handleCardClick(playerIndex, index, el);
+        root.appendChild(el);
+      });
+    }
+
+    function valueClass(v) {
+      if (v < 0) return "negative";
+      if (v <= 3) return "low";
+      if (v <= 7) return "mid";
+      return "high";
+    }
+
+    function handleCardClick(playerIndex, index, el) {
+      if (!state || locked) return;
+
+      if (playerIndex !== yourIndex) {
+        return shake(el);
+      }
+
+      if (state.current !== yourIndex) {
+        return shake(el);
+      }
+
+      const card = state.players[playerIndex].board[index];
+
+      if (card.removed) return shake(el);
+
+      if (state.phase === "replaceWithDrawn" || state.phase === "replaceWithDiscard") {
+        animateFromTo(el, discardPile, card.value ?? state.drawnCard, true, () => {
+          sendAction({
+            type: "cardClick",
+            index
+          });
+        });
+
+        return;
+      }
+
+      if (state.phase === "revealAfterDiscard") {
+        if (card.open) return shake(el);
+
+        sendAction({
+          type: "cardClick",
+          index
+        });
+
+        return;
+      }
+
+      shake(el);
+    }
+
+    function drawFromDeck() {
+      if (!canPlayPile()) return shake(deckPile);
+
+      animateFromTo(deckPile, drawnBox, 0, false, () => {
+        sendAction({ type: "drawDeck" });
+      }, true);
+    }
+
+    function takeDiscard() {
+      if (!canPlayPile()) return shake(discardPile);
+
+      animateFromTo(discardPile, drawnBox, state.discardTop, false, () => {
+        sendAction({ type: "takeDiscard" });
+      });
+    }
+
+    function canPlayPile() {
+      return state &&
+        joined &&
+        !locked &&
+        !state.gameOver &&
+        state.current === yourIndex &&
+        state.phase === "choosePile";
+    }
+
+    function animateFromTo(fromEl, toEl, value, landOnDiscard, callback, hiddenCard = false) {
+      if (!fromEl || !toEl) {
+        if (callback) callback();
+        return;
+      }
+
+      locked = true;
+
+      const from = fromEl.getBoundingClientRect();
+      const to = toEl.getBoundingClientRect();
+
+      const flying = document.createElement("div");
+      flying.className = "flyingCard " + (hiddenCard ? "" : valueClass(value));
+      flying.textContent = hiddenCard ? "★" : value;
+
+      if (hiddenCard) {
+        flying.style.background = "#6977ff";
+        flying.style.color = "white";
+      }
+
+      const startX = from.left + from.width / 2 - 35;
+      const startY = from.top + from.height / 2 - 46;
+
+      const endX = to.left + to.width / 2 - 35;
+      const endY = to.top + to.height / 2 - 46;
+
+      flying.style.left = `${startX}px`;
+      flying.style.top = `${startY}px`;
+
+      document.body.appendChild(flying);
+
+      requestAnimationFrame(() => {
+        const dx = endX - startX;
+        const dy = endY - startY;
+        const rot = landOnDiscard ? 12 : -8;
+
+        flying.style.transform = `translate(${dx}px, ${dy}px) rotate(${rot}deg) scale(${landOnDiscard ? 0.92 : 1.05})`;
+        flying.style.opacity = landOnDiscard ? "0.25" : "1";
+      });
+
+      setTimeout(() => {
+        flying.remove();
+        locked = false;
+
+        if (callback) callback();
+      }, 480);
+    }
+
+    function shake(el) {
+      el.classList.remove("shake");
+      void el.offsetWidth;
+      el.classList.add("shake");
+    }
+
+    function copyRoomLink() {
+      const room = roomInput.value.trim() || "default";
+      const url = new URL(location.href);
+      url.searchParams.set("room", room);
+
+      navigator.clipboard.writeText(url.toString());
+      statusBox.textContent = "Kamerlink gekopieerd.";
+    }
+
+    deckPile.onclick = drawFromDeck;
+    discardPile.onclick = takeDiscard;
+    joinBtn.onclick = connect;
+    newGameBtn.onclick = () => sendAction({ type: "newGame" });
+    copyBtn.onclick = copyRoomLink;
+  </script>
+</body>
+</html>
