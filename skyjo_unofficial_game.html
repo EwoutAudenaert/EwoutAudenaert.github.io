@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Skyjo-like Card Game</title>
+  <title>Skyjo-like 4 Player Game</title>
 
   <style>
     :root {
@@ -17,7 +17,7 @@
       --text: #f7f7ff;
       --muted: #b4bee2;
       --shadow: 0 18px 45px rgba(0, 0, 0, 0.38);
-      --w: min(1180px, 98vw);
+      --w: min(1280px, 98vw);
     }
 
     * {
@@ -44,9 +44,25 @@
       width: var(--w);
       padding: 12px;
       display: grid;
-      grid-template-columns: 1fr 190px 1fr;
+      grid-template-columns: 1fr 210px 1fr;
+      grid-template-rows: 1fr 1fr;
       gap: 12px;
       align-items: stretch;
+    }
+
+    .center {
+      grid-column: 2;
+      grid-row: 1 / span 2;
+      background: rgba(17, 23, 45, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 0;
+      backdrop-filter: blur(16px);
     }
 
     .player {
@@ -78,7 +94,7 @@
 
     .name {
       font-weight: 900;
-      font-size: 18px;
+      font-size: 17px;
       letter-spacing: 0.01em;
     }
 
@@ -87,7 +103,7 @@
       border-radius: 999px;
       padding: 6px 10px;
       color: var(--muted);
-      font-size: 13px;
+      font-size: 12px;
       white-space: nowrap;
       transition: background 0.25s ease, color 0.25s ease, transform 0.25s ease;
     }
@@ -101,17 +117,17 @@
     .board {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
+      gap: 7px;
       perspective: 1100px;
     }
 
     .card {
-      height: clamp(58px, 10vw, 90px);
-      border-radius: 15px;
+      height: clamp(48px, 7.5vw, 78px);
+      border-radius: 14px;
       display: flex;
       justify-content: center;
       align-items: center;
-      font-size: clamp(22px, 4vw, 38px);
+      font-size: clamp(18px, 3vw, 31px);
       font-weight: 950;
       color: #181818;
       background: var(--card);
@@ -125,8 +141,8 @@
         filter 0.24s ease,
         outline-color 0.24s ease;
       box-shadow:
-        0 8px 0 rgba(0, 0, 0, 0.24),
-        0 14px 22px rgba(0, 0, 0, 0.18);
+        0 7px 0 rgba(0, 0, 0, 0.24),
+        0 12px 20px rgba(0, 0, 0, 0.18);
       border: 2px solid rgba(255, 255, 255, 0.5);
       overflow: hidden;
     }
@@ -143,8 +159,8 @@
     .card:hover {
       transform: translateY(-6px) scale(1.035) rotateZ(-0.7deg);
       box-shadow:
-        0 14px 0 rgba(0, 0, 0, 0.20),
-        0 22px 32px rgba(0, 0, 0, 0.22);
+        0 13px 0 rgba(0, 0, 0, 0.20),
+        0 20px 30px rgba(0, 0, 0, 0.22);
       z-index: 5;
     }
 
@@ -162,7 +178,7 @@
       content: "?";
       color: white;
       opacity: 0.96;
-      font-size: 30px;
+      font-size: 28px;
       text-shadow: 0 4px 10px rgba(0,0,0,0.38);
     }
 
@@ -206,19 +222,6 @@
     .miniCard.high,
     .flyingCard.high {
       background: #ffb0b0;
-    }
-
-    .center {
-      background: rgba(17, 23, 45, 0.92);
-      border: 1px solid rgba(255, 255, 255, 0.09);
-      border-radius: 22px;
-      box-shadow: var(--shadow);
-      padding: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      min-width: 0;
-      backdrop-filter: blur(16px);
     }
 
     .piles {
@@ -328,11 +331,23 @@
       border: 2px solid rgba(255,255,255,0.45);
     }
 
+    .scoreGrid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .scoreGrid strong {
+      color: white;
+    }
+
     .status {
       background: rgba(255, 255, 255, 0.06);
       border-radius: 16px;
       padding: 10px;
-      min-height: 82px;
+      min-height: 100px;
       line-height: 1.35;
       font-size: 14px;
       color: #e8ecff;
@@ -363,18 +378,6 @@
 
     .small {
       background: #3b466f;
-      color: white;
-    }
-
-    .scoreLine {
-      display: flex;
-      justify-content: space-between;
-      gap: 8px;
-      font-size: 14px;
-      color: var(--muted);
-    }
-
-    .scoreLine strong {
       color: white;
     }
 
@@ -500,7 +503,7 @@
       75% { transform: translateX(6px); }
     }
 
-    @media (max-width: 850px) {
+    @media (max-width: 1000px) {
       body {
         align-items: flex-start;
         overflow-y: auto;
@@ -508,10 +511,13 @@
 
       .game {
         grid-template-columns: 1fr;
+        grid-template-rows: auto;
         padding: 8px;
       }
 
       .center {
+        grid-column: auto;
+        grid-row: auto;
         order: -1;
       }
 
@@ -541,7 +547,7 @@
       }
 
       .card {
-        height: 60px;
+        height: 58px;
       }
     }
   </style>
@@ -549,12 +555,12 @@
 
 <body>
   <main class="game">
-    <section class="player" id="humanPanel">
+    <section class="player" id="player0Panel">
       <div class="header">
         <div class="name">Jij</div>
-        <div class="badge" id="humanBadge">startkeuze</div>
+        <div class="badge" id="player0Badge">startkeuze</div>
       </div>
-      <div class="board" id="humanBoard"></div>
+      <div class="board" id="player0Board"></div>
     </section>
 
     <section class="center">
@@ -572,9 +578,11 @@
         <div class="drawn" id="drawnBox">Kies eerst twee eigen kaarten om open te draaien.</div>
       </div>
 
-      <div class="scoreLine">
-        <span>Jouw punten: <strong id="humanScore">0</strong></span>
-        <span>AI punten: <strong id="aiScore">0</strong></span>
+      <div class="scoreGrid">
+        <span>Jij: <strong id="score0">0</strong></span>
+        <span>AI 1: <strong id="score1">0</strong></span>
+        <span>AI 2: <strong id="score2">0</strong></span>
+        <span>AI 3: <strong id="score3">0</strong></span>
       </div>
 
       <div class="status" id="status"></div>
@@ -585,30 +593,52 @@
       </div>
     </section>
 
-    <section class="player" id="aiPanel">
+    <section class="player" id="player1Panel">
       <div class="header">
-        <div class="name">Computer</div>
-        <div class="badge" id="aiBadge">wachten</div>
+        <div class="name">AI 1</div>
+        <div class="badge" id="player1Badge">wachten</div>
       </div>
-      <div class="board" id="aiBoard"></div>
+      <div class="board" id="player1Board"></div>
+    </section>
+
+    <section class="player" id="player2Panel">
+      <div class="header">
+        <div class="name">AI 2</div>
+        <div class="badge" id="player2Badge">wachten</div>
+      </div>
+      <div class="board" id="player2Board"></div>
+    </section>
+
+    <section class="player" id="player3Panel">
+      <div class="header">
+        <div class="name">AI 3</div>
+        <div class="badge" id="player3Badge">wachten</div>
+      </div>
+      <div class="board" id="player3Board"></div>
     </section>
   </main>
 
   <script>
-    const humanPanel = document.getElementById("humanPanel");
-    const aiPanel = document.getElementById("aiPanel");
-    const humanBoard = document.getElementById("humanBoard");
-    const aiBoard = document.getElementById("aiBoard");
+    const PLAYER_COUNT = 4;
+
     const deckPile = document.getElementById("deckPile");
     const discardPile = document.getElementById("discardPile");
     const drawnBox = document.getElementById("drawnBox");
     const statusBox = document.getElementById("status");
-    const humanScoreEl = document.getElementById("humanScore");
-    const aiScoreEl = document.getElementById("aiScore");
-    const humanBadge = document.getElementById("humanBadge");
-    const aiBadge = document.getElementById("aiBadge");
     const newGameBtn = document.getElementById("newGameBtn");
     const hintBtn = document.getElementById("hintBtn");
+
+    const panels = [];
+    const boards = [];
+    const badges = [];
+    const scoreEls = [];
+
+    for (let i = 0; i < PLAYER_COUNT; i++) {
+      panels[i] = document.getElementById(`player${i}Panel`);
+      boards[i] = document.getElementById(`player${i}Board`);
+      badges[i] = document.getElementById(`player${i}Badge`);
+      scoreEls[i] = document.getElementById(`score${i}`);
+    }
 
     let deck = [];
     let discard = [];
@@ -620,6 +650,7 @@
     let tookDiscard = false;
     let finalTurns = false;
     let finalStarter = null;
+    let finalTurnsLeft = 0;
     let gameOver = false;
     let locked = false;
 
@@ -657,8 +688,10 @@
       discard = [];
 
       players = [
-        { name: "Jij", board: [], isAI: false },
-        { name: "Computer", board: [], isAI: true }
+        { name: "Jij", short: "Jij", board: [], isAI: false },
+        { name: "AI 1", short: "AI 1", board: [], isAI: true },
+        { name: "AI 2", short: "AI 2", board: [], isAI: true },
+        { name: "AI 3", short: "AI 3", board: [], isAI: true }
       ];
 
       current = 0;
@@ -668,6 +701,7 @@
       tookDiscard = false;
       finalTurns = false;
       finalStarter = null;
+      finalTurnsLeft = 0;
       gameOver = false;
       locked = false;
 
@@ -683,14 +717,17 @@
         }
       }
 
-      revealRandomAIStartCards();
+      for (let i = 1; i < PLAYER_COUNT; i++) {
+        revealRandomStartCards(i);
+      }
+
       discard.push(deck.pop());
 
       log("Kies zelf twee kaarten aan jouw kant om open te draaien.");
       render();
     }
 
-    function revealRandomAIStartCards() {
+    function revealRandomStartCards(playerIndex) {
       const first = Math.floor(Math.random() * 12);
       let second = Math.floor(Math.random() * 12);
 
@@ -698,45 +735,37 @@
         second = Math.floor(Math.random() * 12);
       }
 
-      players[1].board[first].open = true;
-      players[1].board[second].open = true;
+      players[playerIndex].board[first].open = true;
+      players[playerIndex].board[second].open = true;
     }
 
     function render() {
-      renderBoard(humanBoard, players[0], 0);
-      renderBoard(aiBoard, players[1], 1);
+      for (let i = 0; i < PLAYER_COUNT; i++) {
+        renderBoard(boards[i], players[i], i);
+      }
 
       discardPile.textContent = topDiscard();
       discardPile.className = "pile discard " + valueClass(topDiscard());
       deckPile.textContent = deck.length ? "★" : "↻";
 
-      const humanActive =
-        !gameOver &&
-        (
-          phase === "initialReveal" ||
-          (current === 0 && phase !== "aiThinking")
-        );
+      for (let i = 0; i < PLAYER_COUNT; i++) {
+        const isActive =
+          !gameOver &&
+          (
+            phase === "initialReveal" && i === 0 ||
+            phase !== "initialReveal" && current === i
+          );
 
-      humanPanel.classList.toggle("activePanel", humanActive);
-      aiPanel.classList.toggle("activePanel", !gameOver && current === 1);
+        panels[i].classList.toggle("activePanel", isActive);
+
+        badges[i].textContent = getBadgeText(i);
+        badges[i].classList.toggle("active", isActive);
+
+        scoreEls[i].textContent = visibleScore(players[i]);
+      }
 
       deckPile.classList.toggle("usable", !gameOver && !locked && current === 0 && phase === "choosePile");
       discardPile.classList.toggle("usable", !gameOver && !locked && current === 0 && phase === "choosePile");
-
-      humanBadge.textContent =
-        phase === "initialReveal"
-          ? `${initialPicks}/2 gekozen`
-          : current === 0 && !gameOver
-            ? "aan zet"
-            : "wachten";
-
-      aiBadge.textContent = current === 1 && !gameOver ? "aan zet" : "wachten";
-
-      humanBadge.classList.toggle("active", phase === "initialReveal" || (current === 0 && !gameOver));
-      aiBadge.classList.toggle("active", current === 1 && !gameOver);
-
-      humanScoreEl.textContent = visibleScore(players[0]);
-      aiScoreEl.textContent = visibleScore(players[1]);
 
       if (drawnCard === null) {
         if (phase === "initialReveal") {
@@ -744,16 +773,30 @@
         } else if (phase === "choosePile") {
           drawnBox.textContent = current === 0
             ? "Klik op de trekstapel of aflegstapel."
-            : "Computer denkt na...";
+            : `${players[current].name} denkt na...`;
         } else if (phase === "revealAfterDiscard") {
           drawnBox.textContent = "Kies een gesloten kaart om open te draaien.";
+        } else if (phase === "aiThinking") {
+          drawnBox.textContent = `${players[current].name} denkt na...`;
         } else {
           drawnBox.textContent = "Kies een kaart.";
         }
       } else {
         drawnBox.innerHTML = `<div class="miniCard ${valueClass(drawnCard)}" id="drawnMini">${drawnCard}</div>`;
-        document.getElementById("drawnMini").onclick = discardDrawnCard;
+        const mini = document.getElementById("drawnMini");
+        if (mini) mini.onclick = discardDrawnCard;
       }
+    }
+
+    function getBadgeText(i) {
+      if (gameOver) return "einde";
+
+      if (phase === "initialReveal") {
+        return i === 0 ? `${initialPicks}/2 gekozen` : "startkaarten";
+      }
+
+      if (current === i) return "aan zet";
+      return "wachten";
     }
 
     function renderBoard(root, player, playerIndex) {
@@ -924,6 +967,7 @@
           if (initialPicks >= 2) {
             phase = "choosePile";
             current = 0;
+
             setTimeout(() => {
               log("Jij begint. Klik op de trekstapel of aflegstapel.");
               render();
@@ -944,10 +988,10 @@
 
       if (phase === "replaceWithDrawn" || phase === "replaceWithDiscard") {
         const old = card.value;
-        card.value = drawnCard;
-        card.open = true;
-
         const incoming = drawnCard;
+
+        card.value = incoming;
+        card.open = true;
 
         discard.push(old);
         drawnCard = null;
@@ -1006,9 +1050,7 @@
         if (cleared.length) {
           for (const i of cleared) {
             const el = getCardElement(current, i);
-            if (el) {
-              el.classList.add("clearAnim");
-            }
+            if (el) el.classList.add("clearAnim");
           }
         }
 
@@ -1016,15 +1058,20 @@
           if (allOpen(player) && !finalTurns) {
             finalTurns = true;
             finalStarter = current;
-            log(`${player.name} heeft alles open. De andere speler krijgt nog één beurt.`);
+            finalTurnsLeft = PLAYER_COUNT - 1;
+            log(`${player.name} heeft alles open. Elke andere speler krijgt nog één beurt.`);
           }
 
           if (finalTurns && current !== finalStarter) {
-            endGame();
-            return;
+            finalTurnsLeft--;
+
+            if (finalTurnsLeft <= 0) {
+              endGame();
+              return;
+            }
           }
 
-          current = 1 - current;
+          current = nextPlayer(current);
           phase = "choosePile";
           drawnCard = null;
           tookDiscard = false;
@@ -1035,6 +1082,10 @@
           }
         }, cleared.length ? 760 : 360);
       }, 240);
+    }
+
+    function nextPlayer(index) {
+      return (index + 1) % PLAYER_COUNT;
     }
 
     function clearColumns(player) {
@@ -1054,7 +1105,7 @@
             removedIndexes.push(i);
           }
 
-          log(`Kolom met drie keer ${cards[0].value} verwijderd.`);
+          log(`${player.name} verwijderde een kolom met drie keer ${cards[0].value}.`);
         }
       }
 
@@ -1066,12 +1117,13 @@
     }
 
     function aiTurn() {
-      if (locked || gameOver || current !== 1) return;
+      if (locked || gameOver || current === 0) return;
 
       phase = "aiThinking";
       render();
 
-      const ai = players[1];
+      const aiIndex = current;
+      const ai = players[aiIndex];
       const discardValue = topDiscard();
 
       const hidden = ai.board
@@ -1089,9 +1141,9 @@
 
           animateFromTo({
             fromEl: discardPile,
-            toEl: getCardElement(1, openCards[0].i),
+            toEl: getCardElement(aiIndex, openCards[0].i),
             value: drawnCard,
-            onDone: () => aiSwap(openCards[0].i)
+            onDone: () => aiSwap(aiIndex, openCards[0].i)
           });
 
           return;
@@ -1103,9 +1155,9 @@
 
           animateFromTo({
             fromEl: discardPile,
-            toEl: getCardElement(1, target),
+            toEl: getCardElement(aiIndex, target),
             value: drawnCard,
-            onDone: () => aiSwap(target)
+            onDone: () => aiSwap(aiIndex, target)
           });
 
           return;
@@ -1135,9 +1187,9 @@
 
               animateFromTo({
                 fromEl: drawnBox,
-                toEl: getCardElement(1, target),
+                toEl: getCardElement(aiIndex, target),
                 value: drawnCard,
-                onDone: () => aiSwap(target)
+                onDone: () => aiSwap(aiIndex, target)
               });
             } else {
               discard.push(drawn);
@@ -1152,13 +1204,13 @@
                     const target = hidden[Math.floor(Math.random() * hidden.length)].i;
                     ai.board[target].open = true;
 
-                    const targetEl = getCardElement(1, target);
+                    const targetEl = getCardElement(aiIndex, target);
                     flipCard(targetEl, () => {
-                      log(`Computer trok blind, legde ${drawn} af en draaide een kaart open.`);
+                      log(`${ai.name} trok blind, legde ${drawn} af en draaide een kaart open.`);
                       afterMove();
                     });
                   } else {
-                    log(`Computer legde ${drawn} af.`);
+                    log(`${ai.name} legde ${drawn} af.`);
                     afterMove();
                   }
                 }
@@ -1169,8 +1221,8 @@
       }, 450);
     }
 
-    function aiSwap(index) {
-      const ai = players[1];
+    function aiSwap(playerIndex, index) {
+      const ai = players[playerIndex];
       const old = ai.board[index].value;
       const incoming = drawnCard;
 
@@ -1182,15 +1234,15 @@
       phase = "choosePile";
 
       render();
-      popCard(getCardElement(1, index));
+      popCard(getCardElement(playerIndex, index));
 
       animateFromTo({
-        fromEl: getCardElement(1, index),
+        fromEl: getCardElement(playerIndex, index),
         toEl: discardPile,
         value: old,
         fadeOut: true,
         onDone: () => {
-          log(`Computer wisselde een kaart en legde ${old} af.`);
+          log(`${ai.name} wisselde een kaart en legde ${old} af.`);
           afterMove();
         }
       });
@@ -1215,14 +1267,22 @@
         });
       }
 
-      const human = finalScore(players[0]);
-      const ai = finalScore(players[1]);
+      const scores = players.map(finalScore);
+      const min = Math.min(...scores);
+      const winners = players
+        .map((p, i) => ({ name: p.name, score: scores[i] }))
+        .filter(p => p.score === min)
+        .map(p => p.name);
 
-      let result = "Gelijkspel.";
-      if (human < ai) result = "Jij wint.";
-      if (ai < human) result = "Computer wint.";
+      const scoreText = players
+        .map((p, i) => `${p.name}: ${scores[i]}`)
+        .join(" | ");
 
-      log(`Einde ronde. Jij: ${human} punten. Computer: ${ai} punten. ${result}`);
+      const result = winners.length === 1
+        ? `${winners[0]} wint.`
+        : `Gelijkspel tussen ${winners.join(" en ")}.`;
+
+      log(`Einde ronde. ${scoreText}. ${result}`);
       render();
     }
 
@@ -1359,7 +1419,7 @@
       }
 
       if (current !== 0) {
-        log("Computer is aan zet.");
+        log(`${players[current].name} is aan zet.`);
         return;
       }
 
