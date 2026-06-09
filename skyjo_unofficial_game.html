@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Skyjo-like Card Game</title>
+
   <style>
     :root {
       --bg: #151a2d;
@@ -37,7 +38,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      overflow-x: hidden;
+      overflow: hidden;
     }
 
     .game {
@@ -249,6 +250,7 @@
       color: var(--muted);
       padding: 10px;
       font-size: 14px;
+      grid-column: span 2;
     }
 
     .drawn .miniCard {
@@ -315,6 +317,27 @@
 
     .scoreLine strong {
       color: white;
+    }
+
+    .flyingCard {
+      position: fixed;
+      z-index: 9999;
+      width: 70px;
+      height: 92px;
+      border-radius: 13px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 34px;
+      font-weight: 900;
+      color: #111;
+      background: var(--card);
+      border: 2px solid rgba(255,255,255,0.45);
+      box-shadow: 0 14px 25px rgba(0,0,0,0.35);
+      pointer-events: none;
+      transition:
+        transform 0.46s cubic-bezier(.2,.9,.2,1),
+        opacity 0.46s ease;
     }
 
     .flash {
@@ -390,6 +413,7 @@
     @media (max-width: 850px) {
       body {
         align-items: flex-start;
+        overflow-y: auto;
       }
 
       .game {
@@ -402,7 +426,7 @@
       }
 
       .piles {
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(2, 1fr);
         align-items: end;
       }
 
@@ -413,8 +437,13 @@
       }
 
       .drawn {
-        height: 92px;
-        grid-column: span 2;
+        height: 88px;
+      }
+
+      .drawn .miniCard {
+        width: 58px;
+        height: 76px;
+        font-size: 28px;
       }
 
       .board {
@@ -427,6 +456,7 @@
     }
   </style>
 </head>
+
 <body>
   <main class="game">
     <section class="player" id="humanPanel">
@@ -498,13 +528,24 @@
     let finalTurns = false;
     let finalStarter = null;
     let gameOver = false;
+    let locked = false;
 
     function createDeck() {
       const values = [];
+
+      // Skyjo-verdeling:
+      // -2 komt 5 keer voor
+      // 0 komt 15 keer voor
+      // -1 en 1 t.e.m. 12 komen elk 10 keer voor
+      // Daardoor zijn er in totaal veel meer positieve/hogere kaarten dan negatieve kaarten.
       addValues(values, -2, 5);
       addValues(values, -1, 10);
       addValues(values, 0, 15);
-      for (let n = 1; n <= 12; n++) addValues(values, n, 10);
+
+      for (let n = 1; n <= 12; n++) {
+        addValues(values, n, 10);
+      }
+
       return shuffle(values);
     }
 
@@ -514,20 +555,24 @@
 
     function shuffle(arr) {
       const copy = [...arr];
+
       for (let i = copy.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [copy[i], copy[j]] = [copy[j], copy[i]];
       }
+
       return copy;
     }
 
     function startGame() {
       deck = createDeck();
       discard = [];
+
       players = [
         { name: "Jij", board: [], isAI: false },
         { name: "Computer", board: [], isAI: true }
       ];
+
       current = 0;
       phase = "choosePile";
       drawnCard = null;
@@ -535,9 +580,11 @@
       finalTurns = false;
       finalStarter = null;
       gameOver = false;
+      locked = false;
 
       for (const p of players) {
         p.board = [];
+
         for (let i = 0; i < 12; i++) {
           p.board.push({
             value: deck.pop(),
@@ -548,7 +595,10 @@
 
         const first = Math.floor(Math.random() * 12);
         let second = Math.floor(Math.random() * 12);
-        while (second === first) second = Math.floor(Math.random() * 12);
+
+        while (second === first) {
+          second = Math.floor(Math.random() * 12);
+        }
 
         p.board[first].open = true;
         p.board[second].open = true;
@@ -558,7 +608,9 @@
       log("Nieuw spel. Klik op de trekstapel of aflegstapel.");
       render();
 
-      if (players[current].isAI) setTimeout(aiTurn, 700);
+      if (players[current].isAI) {
+        setTimeout(aiTurn, 700);
+      }
     }
 
     function render() {
@@ -569,11 +621,12 @@
       discardPile.className = "pile discard " + valueClass(topDiscard());
       deckPile.textContent = deck.length ? "★" : "↻";
 
-      deckPile.classList.toggle("usable", !gameOver && current === 0 && phase === "choosePile");
-      discardPile.classList.toggle("usable", !gameOver && current === 0 && phase === "choosePile");
+      deckPile.classList.toggle("usable", !gameOver && !locked && current === 0 && phase === "choosePile");
+      discardPile.classList.toggle("usable", !gameOver && !locked && current === 0 && phase === "choosePile");
 
       humanBadge.textContent = current === 0 && !gameOver ? "aan zet" : "wachten";
       aiBadge.textContent = current === 1 && !gameOver ? "aan zet" : "wachten";
+
       humanBadge.classList.toggle("active", current === 0 && !gameOver);
       aiBadge.classList.toggle("active", current === 1 && !gameOver);
 
@@ -596,6 +649,8 @@
       player.board.forEach((card, index) => {
         const el = document.createElement("div");
         el.className = "card";
+        el.dataset.playerIndex = playerIndex;
+        el.dataset.cardIndex = index;
 
         if (card.removed) {
           el.classList.add("removed");
@@ -612,8 +667,13 @@
           playerIndex === current &&
           current === 0 &&
           !gameOver &&
-          (phase === "replaceWithDrawn" || phase === "replaceWithDiscard" || phase === "revealAfterDiscard")
-          && !card.removed
+          !locked &&
+          (
+            phase === "replaceWithDrawn" ||
+            phase === "replaceWithDiscard" ||
+            phase === "revealAfterDiscard"
+          ) &&
+          !card.removed
         ) {
           el.classList.add("selected");
         }
@@ -653,60 +713,89 @@
     }
 
     function drawFromDeck() {
-      if (gameOver || current !== 0 || phase !== "choosePile") return shake(deckPile);
+      if (locked || gameOver || current !== 0 || phase !== "choosePile") {
+        return shake(deckPile);
+      }
 
-      if (!deck.length) recycleDiscard();
+      if (!deck.length) {
+        recycleDiscard();
+      }
 
       drawnCard = deck.pop();
       tookDiscard = false;
       phase = "replaceWithDrawn";
-      log(`Je trok ${drawnCard}. Klik op een kaart om te wisselen, of klik op de getrokken kaart om ze af te leggen.`);
-      flash(deckPile);
-      render();
+
+      animateFromTo(deckPile, drawnBox, drawnCard, false, () => {
+        log(`Je trok ${drawnCard}. Klik op een kaart om te wisselen, of klik op de getrokken kaart om ze af te leggen.`);
+        render();
+      });
     }
 
     function takeDiscard() {
-      if (gameOver || current !== 0 || phase !== "choosePile") return shake(discardPile);
+      if (locked || gameOver || current !== 0 || phase !== "choosePile") {
+        return shake(discardPile);
+      }
 
       drawnCard = discard.pop();
       tookDiscard = true;
       phase = "replaceWithDiscard";
-      log(`Je neemt ${drawnCard} van de aflegstapel. Klik op een kaart om te wisselen.`);
-      flash(discardPile);
-      render();
+
+      animateFromTo(discardPile, drawnBox, drawnCard, false, () => {
+        log(`Je neemt ${drawnCard} van de aflegstapel. Klik op een kaart om te wisselen.`);
+        render();
+      });
     }
 
     function discardDrawnCard() {
-      if (gameOver || current !== 0 || phase !== "replaceWithDrawn" || tookDiscard) return;
+      if (locked || gameOver || current !== 0 || phase !== "replaceWithDrawn" || tookDiscard) {
+        return;
+      }
 
-      discard.push(drawnCard);
+      const value = drawnCard;
+      const source = document.getElementById("drawnMini");
+
+      discard.push(value);
       drawnCard = null;
       phase = "revealAfterDiscard";
-      log("Kaart afgelegd. Klik nu op een gesloten kaart om ze open te draaien.");
-      render();
+
+      animateFromTo(source, discardPile, value, true, () => {
+        log("Kaart afgelegd. Klik nu op een gesloten kaart om ze open te draaien.");
+        render();
+      });
     }
 
     function handleCardClick(playerIndex, index, el) {
-      if (gameOver || playerIndex !== current || current !== 0) return;
+      if (locked || gameOver || playerIndex !== current || current !== 0) return;
 
       const card = players[0].board[index];
-      if (card.removed) return shake(el);
+
+      if (card.removed) {
+        return shake(el);
+      }
 
       if (phase === "replaceWithDrawn" || phase === "replaceWithDiscard") {
         const old = card.value;
         card.value = drawnCard;
         card.open = true;
+
         discard.push(old);
         drawnCard = null;
         phase = "choosePile";
-        animateCard(el, "swap");
-        log(`Gewisseld. ${old} ligt nu op de aflegstapel.`);
-        afterMove();
+
+        animateFromTo(el, discardPile, old, true, () => {
+          animateCard(el, "swap");
+          log(`Gewisseld. ${old} ligt nu op de aflegstapel.`);
+          afterMove();
+        });
+
         return;
       }
 
       if (phase === "revealAfterDiscard") {
-        if (card.open) return shake(el);
+        if (card.open) {
+          return shake(el);
+        }
+
         card.open = true;
         animateCard(el, "flip");
         phase = "choosePile";
@@ -743,7 +832,9 @@
           tookDiscard = false;
           render();
 
-          if (players[current].isAI && !gameOver) setTimeout(aiTurn, 800);
+          if (players[current].isAI && !gameOver) {
+            setTimeout(aiTurn, 800);
+          }
         }, 420);
       }, 260);
     }
@@ -761,6 +852,7 @@
           for (const i of indexes) {
             player.board[i].removed = true;
           }
+
           log(`Kolom met drie keer ${cards[0].value} verwijderd.`);
         }
       }
@@ -771,10 +863,11 @@
     }
 
     function aiTurn() {
-      if (gameOver || current !== 1) return;
+      if (locked || gameOver || current !== 1) return;
 
       const ai = players[1];
       const discardValue = topDiscard();
+
       const hidden = ai.board
         .map((c, i) => ({ c, i }))
         .filter(x => !x.c.open && !x.c.removed);
@@ -786,53 +879,76 @@
 
       if (discardValue <= 3 && openCards.length && openCards[0].c.value > discardValue) {
         drawnCard = discard.pop();
-        const target = openCards[0].i;
-        aiSwap(target);
+
+        animateFromTo(discardPile, getCardElement(1, openCards[0].i), drawnCard, false, () => {
+          aiSwap(openCards[0].i);
+        });
+
         return;
       }
 
       if (discardValue <= 1 && hidden.length) {
-        drawnCard = discard.pop();
         const target = hidden[Math.floor(Math.random() * hidden.length)].i;
-        aiSwap(target);
+        drawnCard = discard.pop();
+
+        animateFromTo(discardPile, getCardElement(1, target), drawnCard, false, () => {
+          aiSwap(target);
+        });
+
         return;
       }
 
-      if (!deck.length) recycleDiscard();
+      if (!deck.length) {
+        recycleDiscard();
+      }
 
       const drawn = deck.pop();
 
-      if (drawn <= 3) {
-        drawnCard = drawn;
-        const target = openCards.length && openCards[0].c.value > drawn
-          ? openCards[0].i
-          : hidden.length
-            ? hidden[Math.floor(Math.random() * hidden.length)].i
-            : openCards[0].i;
-        aiSwap(target);
-      } else {
-        discard.push(drawn);
-        if (hidden.length) {
-          const target = hidden[Math.floor(Math.random() * hidden.length)].i;
-          ai.board[target].open = true;
-          log(`Computer trok blind, legde ${drawn} af en draaide een kaart open.`);
+      animateFromTo(deckPile, drawnBox, drawn, false, () => {
+        if (drawn <= 3) {
+          drawnCard = drawn;
+
+          const target = openCards.length && openCards[0].c.value > drawn
+            ? openCards[0].i
+            : hidden.length
+              ? hidden[Math.floor(Math.random() * hidden.length)].i
+              : openCards[0].i;
+
+          animateFromTo(drawnBox, getCardElement(1, target), drawnCard, false, () => {
+            aiSwap(target);
+          });
         } else {
-          log(`Computer legde ${drawn} af.`);
+          discard.push(drawn);
+
+          animateFromTo(drawnBox, discardPile, drawn, true, () => {
+            if (hidden.length) {
+              const target = hidden[Math.floor(Math.random() * hidden.length)].i;
+              ai.board[target].open = true;
+              log(`Computer trok blind, legde ${drawn} af en draaide een kaart open.`);
+            } else {
+              log(`Computer legde ${drawn} af.`);
+            }
+
+            afterMove();
+          });
         }
-        afterMove();
-      }
+      });
     }
 
     function aiSwap(index) {
       const ai = players[1];
       const old = ai.board[index].value;
+
       ai.board[index].value = drawnCard;
       ai.board[index].open = true;
-      discard.push(old);
 
-      log(`Computer wisselde een kaart en legde ${old} af.`);
+      discard.push(old);
       drawnCard = null;
-      afterMove();
+
+      animateFromTo(getCardElement(1, index), discardPile, old, true, () => {
+        log(`Computer wisselde een kaart en legde ${old} af.`);
+        afterMove();
+      });
     }
 
     function recycleDiscard() {
@@ -841,6 +957,7 @@
       const keep = discard.pop();
       deck = shuffle(discard);
       discard = [keep];
+
       log("Aflegstapel werd opnieuw geschud tot trekstapel.");
     }
 
@@ -862,6 +979,53 @@
 
       log(`Einde ronde. Jij: ${human} punten. Computer: ${ai} punten. ${result}`);
       render();
+    }
+
+    function getCardElement(playerIndex, cardIndex) {
+      return document.querySelector(`[data-player-index="${playerIndex}"][data-card-index="${cardIndex}"]`);
+    }
+
+    function animateFromTo(fromEl, toEl, value, landOnDiscard, callback) {
+      if (!fromEl || !toEl) {
+        if (callback) callback();
+        return;
+      }
+
+      locked = true;
+
+      const from = fromEl.getBoundingClientRect();
+      const to = toEl.getBoundingClientRect();
+
+      const flying = document.createElement("div");
+      flying.className = "flyingCard " + valueClass(value);
+      flying.textContent = value;
+
+      const startX = from.left + from.width / 2 - 35;
+      const startY = from.top + from.height / 2 - 46;
+
+      const endX = to.left + to.width / 2 - 35;
+      const endY = to.top + to.height / 2 - 46;
+
+      flying.style.left = `${startX}px`;
+      flying.style.top = `${startY}px`;
+
+      document.body.appendChild(flying);
+
+      requestAnimationFrame(() => {
+        const dx = endX - startX;
+        const dy = endY - startY;
+        const rot = landOnDiscard ? 12 : -8;
+
+        flying.style.transform = `translate(${dx}px, ${dy}px) rotate(${rot}deg) scale(${landOnDiscard ? 0.92 : 1.05})`;
+        flying.style.opacity = landOnDiscard ? "0.25" : "1";
+      });
+
+      setTimeout(() => {
+        flying.remove();
+        locked = false;
+
+        if (callback) callback();
+      }, 480);
     }
 
     function flash(el) {
@@ -895,6 +1059,7 @@
 
       if (phase === "choosePile") {
         const discardValue = topDiscard();
+
         if (discardValue <= 2) {
           log(`Hint: ${discardValue} is laag. Neem waarschijnlijk de aflegstapel.`);
         } else if (discardValue >= 8) {
