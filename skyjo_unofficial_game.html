@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Skyjo-like Card Game</title>
+  <title>Skyjo Multiplayer</title>
 
   <style>
     :root {
@@ -13,8 +13,6 @@
       --card: #f8f1dc;
       --back: #5666d6;
       --accent: #ffd166;
-      --good: #60d394;
-      --bad: #ef476f;
       --text: #f7f7ff;
       --muted: #aeb7d8;
       --shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
@@ -57,6 +55,12 @@
       box-shadow: var(--shadow);
       padding: 12px;
       min-width: 0;
+      transition: transform 0.2s ease, outline 0.2s ease;
+    }
+
+    .player.turn {
+      outline: 4px solid var(--accent);
+      transform: translateY(-3px);
     }
 
     .header {
@@ -150,19 +154,27 @@
       animation: bounce 0.65s infinite alternate;
     }
 
-    .card.negative {
+    .card.negative,
+    .miniCard.negative,
+    .flyingCard.negative {
       background: #b5f5d1;
     }
 
-    .card.low {
+    .card.low,
+    .miniCard.low,
+    .flyingCard.low {
       background: #d8f7c5;
     }
 
-    .card.mid {
+    .card.mid,
+    .miniCard.mid,
+    .flyingCard.mid {
       background: #fff3bf;
     }
 
-    .card.high {
+    .card.high,
+    .miniCard.high,
+    .flyingCard.high {
       background: #ffb3b3;
     }
 
@@ -260,20 +272,20 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      background: var(--card);
       color: #111;
       font-size: 34px;
       font-weight: 900;
       box-shadow: 0 8px 0 rgba(0, 0, 0, 0.25);
       cursor: pointer;
       animation: dealIn 0.28s ease both;
+      border: 2px solid rgba(255,255,255,0.45);
     }
 
     .status {
       background: rgba(255, 255, 255, 0.06);
       border-radius: 14px;
       padding: 10px;
-      min-height: 76px;
+      min-height: 86px;
       line-height: 1.35;
       font-size: 14px;
       color: #e8ecff;
@@ -340,20 +352,12 @@
         opacity 0.46s ease;
     }
 
-    .flash {
-      animation: flash 0.45s ease;
-    }
-
     .flip {
       animation: flip 0.38s ease;
     }
 
     .swap {
       animation: swap 0.35s ease;
-    }
-
-    .clear {
-      animation: clear 0.55s ease forwards;
     }
 
     .shake {
@@ -390,18 +394,6 @@
       0% { transform: scale(1) rotate(0); }
       50% { transform: scale(1.18) rotate(5deg); }
       100% { transform: scale(1) rotate(0); }
-    }
-
-    @keyframes clear {
-      0% { transform: scale(1); opacity: 1; }
-      45% { transform: scale(1.18) rotate(5deg); opacity: 1; }
-      100% { transform: scale(0.15) rotate(25deg); opacity: 0.12; }
-    }
-
-    @keyframes flash {
-      0% { filter: brightness(1); }
-      50% { filter: brightness(1.8); }
-      100% { filter: brightness(1); }
     }
 
     @keyframes shake {
@@ -459,12 +451,12 @@
 
 <body>
   <main class="game">
-    <section class="player" id="humanPanel">
+    <section class="player" id="leftPanel">
       <div class="header">
-        <div class="name">Jij</div>
-        <div class="badge" id="humanBadge">wachten</div>
+        <div class="name">Speler links</div>
+        <div class="badge" id="leftBadge">wachten</div>
       </div>
-      <div class="board" id="humanBoard"></div>
+      <div class="board" id="leftBoard"></div>
     </section>
 
     <section class="center">
@@ -483,38 +475,40 @@
       </div>
 
       <div class="scoreLine">
-        <span>Jouw punten: <strong id="humanScore">0</strong></span>
-        <span>AI punten: <strong id="aiScore">0</strong></span>
+        <span>Links: <strong id="leftScore">0</strong></span>
+        <span>Rechts: <strong id="rightScore">0</strong></span>
       </div>
 
       <div class="status" id="status"></div>
 
       <div class="buttons">
         <button id="newGameBtn">Nieuw spel</button>
-        <button class="small" id="hintBtn">Hint</button>
+        <button class="small" id="hintBtn">Hint voor speler aan zet</button>
       </div>
     </section>
 
-    <section class="player" id="aiPanel">
+    <section class="player" id="rightPanel">
       <div class="header">
-        <div class="name">Computer</div>
-        <div class="badge" id="aiBadge">wachten</div>
+        <div class="name">Speler rechts</div>
+        <div class="badge" id="rightBadge">wachten</div>
       </div>
-      <div class="board" id="aiBoard"></div>
+      <div class="board" id="rightBoard"></div>
     </section>
   </main>
 
   <script>
-    const humanBoard = document.getElementById("humanBoard");
-    const aiBoard = document.getElementById("aiBoard");
+    const leftBoard = document.getElementById("leftBoard");
+    const rightBoard = document.getElementById("rightBoard");
+    const leftPanel = document.getElementById("leftPanel");
+    const rightPanel = document.getElementById("rightPanel");
     const deckPile = document.getElementById("deckPile");
     const discardPile = document.getElementById("discardPile");
     const drawnBox = document.getElementById("drawnBox");
     const statusBox = document.getElementById("status");
-    const humanScoreEl = document.getElementById("humanScore");
-    const aiScoreEl = document.getElementById("aiScore");
-    const humanBadge = document.getElementById("humanBadge");
-    const aiBadge = document.getElementById("aiBadge");
+    const leftScoreEl = document.getElementById("leftScore");
+    const rightScoreEl = document.getElementById("rightScore");
+    const leftBadge = document.getElementById("leftBadge");
+    const rightBadge = document.getElementById("rightBadge");
     const newGameBtn = document.getElementById("newGameBtn");
     const hintBtn = document.getElementById("hintBtn");
 
@@ -533,11 +527,6 @@
     function createDeck() {
       const values = [];
 
-      // Skyjo-verdeling:
-      // -2 komt 5 keer voor
-      // 0 komt 15 keer voor
-      // -1 en 1 t.e.m. 12 komen elk 10 keer voor
-      // Daardoor zijn er in totaal veel meer positieve/hogere kaarten dan negatieve kaarten.
       addValues(values, -2, 5);
       addValues(values, -1, 10);
       addValues(values, 0, 15);
@@ -569,8 +558,8 @@
       discard = [];
 
       players = [
-        { name: "Jij", board: [], isAI: false },
-        { name: "Computer", board: [], isAI: true }
+        { name: "Speler links", short: "Links", board: [] },
+        { name: "Speler rechts", short: "Rechts", board: [] }
       ];
 
       current = 0;
@@ -605,38 +594,40 @@
       }
 
       discard.push(deck.pop());
-      log("Nieuw spel. Klik op de trekstapel of aflegstapel.");
-      render();
 
-      if (players[current].isAI) {
-        setTimeout(aiTurn, 700);
-      }
+      log("Nieuw spel. Speler links begint. Klik op de trekstapel of aflegstapel.");
+      render();
     }
 
     function render() {
-      renderBoard(humanBoard, players[0], 0);
-      renderBoard(aiBoard, players[1], 1);
+      renderBoard(leftBoard, players[0], 0);
+      renderBoard(rightBoard, players[1], 1);
 
       discardPile.textContent = topDiscard();
       discardPile.className = "pile discard " + valueClass(topDiscard());
       deckPile.textContent = deck.length ? "★" : "↻";
 
-      deckPile.classList.toggle("usable", !gameOver && !locked && current === 0 && phase === "choosePile");
-      discardPile.classList.toggle("usable", !gameOver && !locked && current === 0 && phase === "choosePile");
+      const canUsePile = !gameOver && !locked && phase === "choosePile";
 
-      humanBadge.textContent = current === 0 && !gameOver ? "aan zet" : "wachten";
-      aiBadge.textContent = current === 1 && !gameOver ? "aan zet" : "wachten";
+      deckPile.classList.toggle("usable", canUsePile);
+      discardPile.classList.toggle("usable", canUsePile);
 
-      humanBadge.classList.toggle("active", current === 0 && !gameOver);
-      aiBadge.classList.toggle("active", current === 1 && !gameOver);
+      leftBadge.textContent = current === 0 && !gameOver ? "aan zet" : "wachten";
+      rightBadge.textContent = current === 1 && !gameOver ? "aan zet" : "wachten";
 
-      humanScoreEl.textContent = visibleScore(players[0]);
-      aiScoreEl.textContent = visibleScore(players[1]);
+      leftBadge.classList.toggle("active", current === 0 && !gameOver);
+      rightBadge.classList.toggle("active", current === 1 && !gameOver);
+
+      leftPanel.classList.toggle("turn", current === 0 && !gameOver);
+      rightPanel.classList.toggle("turn", current === 1 && !gameOver);
+
+      leftScoreEl.textContent = visibleScore(players[0]);
+      rightScoreEl.textContent = visibleScore(players[1]);
 
       if (drawnCard === null) {
         drawnBox.innerHTML = phase === "choosePile"
-          ? "Klik rechtstreeks op een stapel."
-          : "Kies een kaart.";
+          ? `${players[current].short}: klik op een stapel.`
+          : `${players[current].short}: kies een kaart.`;
       } else {
         drawnBox.innerHTML = `<div class="miniCard ${valueClass(drawnCard)}" id="drawnMini">${drawnCard}</div>`;
         document.getElementById("drawnMini").onclick = discardDrawnCard;
@@ -665,7 +656,6 @@
 
         if (
           playerIndex === current &&
-          current === 0 &&
           !gameOver &&
           !locked &&
           (
@@ -713,7 +703,7 @@
     }
 
     function drawFromDeck() {
-      if (locked || gameOver || current !== 0 || phase !== "choosePile") {
+      if (locked || gameOver || phase !== "choosePile") {
         return shake(deckPile);
       }
 
@@ -726,13 +716,13 @@
       phase = "replaceWithDrawn";
 
       animateFromTo(deckPile, drawnBox, drawnCard, false, () => {
-        log(`Je trok ${drawnCard}. Klik op een kaart om te wisselen, of klik op de getrokken kaart om ze af te leggen.`);
+        log(`${players[current].short} trok ${drawnCard}. Klik op een eigen kaart om te wisselen, of klik op de getrokken kaart om ze af te leggen.`);
         render();
       });
     }
 
     function takeDiscard() {
-      if (locked || gameOver || current !== 0 || phase !== "choosePile") {
+      if (locked || gameOver || phase !== "choosePile") {
         return shake(discardPile);
       }
 
@@ -741,13 +731,13 @@
       phase = "replaceWithDiscard";
 
       animateFromTo(discardPile, drawnBox, drawnCard, false, () => {
-        log(`Je neemt ${drawnCard} van de aflegstapel. Klik op een kaart om te wisselen.`);
+        log(`${players[current].short} neemt ${drawnCard} van de aflegstapel. Klik op een eigen kaart om te wisselen.`);
         render();
       });
     }
 
     function discardDrawnCard() {
-      if (locked || gameOver || current !== 0 || phase !== "replaceWithDrawn" || tookDiscard) {
+      if (locked || gameOver || phase !== "replaceWithDrawn" || tookDiscard) {
         return;
       }
 
@@ -759,15 +749,20 @@
       phase = "revealAfterDiscard";
 
       animateFromTo(source, discardPile, value, true, () => {
-        log("Kaart afgelegd. Klik nu op een gesloten kaart om ze open te draaien.");
+        log(`${players[current].short} legde ${value} af. Klik nu op een eigen gesloten kaart om ze open te draaien.`);
         render();
       });
     }
 
     function handleCardClick(playerIndex, index, el) {
-      if (locked || gameOver || playerIndex !== current || current !== 0) return;
+      if (locked || gameOver) return;
 
-      const card = players[0].board[index];
+      if (playerIndex !== current) {
+        log(`Niet jouw kant. ${players[current].short} is aan zet.`);
+        return shake(el);
+      }
+
+      const card = players[current].board[index];
 
       if (card.removed) {
         return shake(el);
@@ -784,7 +779,7 @@
 
         animateFromTo(el, discardPile, old, true, () => {
           animateCard(el, "swap");
-          log(`Gewisseld. ${old} ligt nu op de aflegstapel.`);
+          log(`${players[current].short} wisselde en legde ${old} af.`);
           afterMove();
         });
 
@@ -799,7 +794,7 @@
         card.open = true;
         animateCard(el, "flip");
         phase = "choosePile";
-        log(`Je draaide ${card.value} open.`);
+        log(`${players[current].short} draaide ${card.value} open.`);
         afterMove();
         return;
       }
@@ -830,11 +825,9 @@
           phase = "choosePile";
           drawnCard = null;
           tookDiscard = false;
-          render();
 
-          if (players[current].isAI && !gameOver) {
-            setTimeout(aiTurn, 800);
-          }
+          log(`${players[current].name} is aan zet. Klik op de trekstapel of aflegstapel.`);
+          render();
         }, 420);
       }, 260);
     }
@@ -853,102 +846,13 @@
             player.board[i].removed = true;
           }
 
-          log(`Kolom met drie keer ${cards[0].value} verwijderd.`);
+          log(`${player.short} verwijderde een kolom met drie keer ${cards[0].value}.`);
         }
       }
     }
 
     function allOpen(player) {
       return player.board.every(c => c.open || c.removed);
-    }
-
-    function aiTurn() {
-      if (locked || gameOver || current !== 1) return;
-
-      const ai = players[1];
-      const discardValue = topDiscard();
-
-      const hidden = ai.board
-        .map((c, i) => ({ c, i }))
-        .filter(x => !x.c.open && !x.c.removed);
-
-      const openCards = ai.board
-        .map((c, i) => ({ c, i }))
-        .filter(x => x.c.open && !x.c.removed)
-        .sort((a, b) => b.c.value - a.c.value);
-
-      if (discardValue <= 3 && openCards.length && openCards[0].c.value > discardValue) {
-        drawnCard = discard.pop();
-
-        animateFromTo(discardPile, getCardElement(1, openCards[0].i), drawnCard, false, () => {
-          aiSwap(openCards[0].i);
-        });
-
-        return;
-      }
-
-      if (discardValue <= 1 && hidden.length) {
-        const target = hidden[Math.floor(Math.random() * hidden.length)].i;
-        drawnCard = discard.pop();
-
-        animateFromTo(discardPile, getCardElement(1, target), drawnCard, false, () => {
-          aiSwap(target);
-        });
-
-        return;
-      }
-
-      if (!deck.length) {
-        recycleDiscard();
-      }
-
-      const drawn = deck.pop();
-
-      animateFromTo(deckPile, drawnBox, drawn, false, () => {
-        if (drawn <= 3) {
-          drawnCard = drawn;
-
-          const target = openCards.length && openCards[0].c.value > drawn
-            ? openCards[0].i
-            : hidden.length
-              ? hidden[Math.floor(Math.random() * hidden.length)].i
-              : openCards[0].i;
-
-          animateFromTo(drawnBox, getCardElement(1, target), drawnCard, false, () => {
-            aiSwap(target);
-          });
-        } else {
-          discard.push(drawn);
-
-          animateFromTo(drawnBox, discardPile, drawn, true, () => {
-            if (hidden.length) {
-              const target = hidden[Math.floor(Math.random() * hidden.length)].i;
-              ai.board[target].open = true;
-              log(`Computer trok blind, legde ${drawn} af en draaide een kaart open.`);
-            } else {
-              log(`Computer legde ${drawn} af.`);
-            }
-
-            afterMove();
-          });
-        }
-      });
-    }
-
-    function aiSwap(index) {
-      const ai = players[1];
-      const old = ai.board[index].value;
-
-      ai.board[index].value = drawnCard;
-      ai.board[index].open = true;
-
-      discard.push(old);
-      drawnCard = null;
-
-      animateFromTo(getCardElement(1, index), discardPile, old, true, () => {
-        log(`Computer wisselde een kaart en legde ${old} af.`);
-        afterMove();
-      });
     }
 
     function recycleDiscard() {
@@ -970,14 +874,14 @@
         });
       }
 
-      const human = finalScore(players[0]);
-      const ai = finalScore(players[1]);
+      const left = finalScore(players[0]);
+      const right = finalScore(players[1]);
 
       let result = "Gelijkspel.";
-      if (human < ai) result = "Jij wint.";
-      if (ai < human) result = "Computer wint.";
+      if (left < right) result = "Speler links wint.";
+      if (right < left) result = "Speler rechts wint.";
 
-      log(`Einde ronde. Jij: ${human} punten. Computer: ${ai} punten. ${result}`);
+      log(`Einde ronde. Links: ${left} punten. Rechts: ${right} punten. ${result}`);
       render();
     }
 
@@ -1028,12 +932,6 @@
       }, 480);
     }
 
-    function flash(el) {
-      el.classList.remove("flash");
-      void el.offsetWidth;
-      el.classList.add("flash");
-    }
-
     function shake(el) {
       el.classList.remove("shake");
       void el.offsetWidth;
@@ -1052,25 +950,20 @@
         return;
       }
 
-      if (current !== 0) {
-        log("Computer is aan zet.");
-        return;
-      }
-
       if (phase === "choosePile") {
         const discardValue = topDiscard();
 
         if (discardValue <= 2) {
-          log(`Hint: ${discardValue} is laag. Neem waarschijnlijk de aflegstapel.`);
+          log(`Hint voor ${players[current].short}: ${discardValue} is laag. Neem waarschijnlijk de aflegstapel.`);
         } else if (discardValue >= 8) {
-          log(`Hint: ${discardValue} is hoog. Trek liever blind.`);
+          log(`Hint voor ${players[current].short}: ${discardValue} is hoog. Trek liever blind.`);
         } else {
-          log(`Hint: ${discardValue} is middelmatig. Neem ze alleen als je een hoge open kaart kan vervangen.`);
+          log(`Hint voor ${players[current].short}: ${discardValue} is middelmatig. Neem ze alleen als je een hoge open kaart kan vervangen.`);
         }
       } else if (phase === "replaceWithDrawn" || phase === "replaceWithDiscard") {
-        log("Hint: vervang je hoogste open kaart. Heb je geen hoge open kaart, kies dan een gesloten kaart.");
+        log(`Hint voor ${players[current].short}: vervang je hoogste open kaart. Heb je geen hoge open kaart, kies dan een gesloten kaart.`);
       } else if (phase === "revealAfterDiscard") {
-        log("Hint: draai een gesloten kaart open in een kolom waar nog weinig risico zit.");
+        log(`Hint voor ${players[current].short}: draai een gesloten kaart open in een kolom waar nog weinig risico zit.`);
       }
     }
 
