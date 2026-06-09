@@ -1,0 +1,14 @@
+// package.json
+{
+  "name": "skyjo-multiplayer",
+  "version": "1.0.0",
+  "description": "Unofficial Skyjo-like multiplayer game over 2 PCs",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "ws": "^8.17.1"
+  }
+}
