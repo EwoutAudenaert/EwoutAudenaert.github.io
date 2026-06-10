@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Skyjo-like 4 Player Game</title>
+  <title>Skyjo by Ew00t</title>
 
   <style>
     :root {
@@ -752,8 +752,8 @@
         const isActive =
           !gameOver &&
           (
-            phase === "initialReveal" && i === 0 ||
-            phase !== "initialReveal" && current === i
+            (phase === "initialReveal" && i === 0) ||
+            (phase !== "initialReveal" && current === i)
           );
 
         panels[i].classList.toggle("activePanel", isActive);
@@ -1116,6 +1116,118 @@
       return player.board.every(c => c.open || c.removed);
     }
 
+    function findRemovalTarget(player, candidateValue) {
+      let best = null;
+
+      for (let col = 0; col < 4; col++) {
+        const indexes = [col, col + 4, col + 8];
+
+        const openMatching = indexes.filter(i => {
+          const c = player.board[i];
+          return c.open && !c.removed && c.value === candidateValue;
+        });
+
+        if (openMatching.length !== 2) continue;
+
+        const possibleTargets = indexes.filter(i => {
+          const c = player.board[i];
+          return !c.removed && !(c.open && c.value === candidateValue);
+        });
+
+        for (const i of possibleTargets) {
+          const c = player.board[i];
+
+          let priority = 0;
+
+          if (!c.open) priority += 30;
+          if (c.open) priority += c.value;
+          if (c.open && c.value > candidateValue) priority += 20;
+          if (candidateValue <= 3) priority += 10;
+
+          if (!best || priority > best.priority) {
+            best = {
+              index: i,
+              priority
+            };
+          }
+        }
+      }
+
+      return best ? best.index : null;
+    }
+
+    function getHighestOpenCardIndex(player) {
+      const openCards = player.board
+        .map((c, i) => ({ c, i }))
+        .filter(x => x.c.open && !x.c.removed)
+        .sort((a, b) => b.c.value - a.c.value);
+
+      return openCards.length ? openCards[0].i : null;
+    }
+
+    function getRandomHiddenCardIndex(player) {
+      const hidden = player.board
+        .map((c, i) => ({ c, i }))
+        .filter(x => !x.c.open && !x.c.removed);
+
+      if (!hidden.length) return null;
+
+      return hidden[Math.floor(Math.random() * hidden.length)].i;
+    }
+
+    function getBestAIReplaceTarget(player, candidateValue) {
+      const removalTarget = findRemovalTarget(player, candidateValue);
+      if (removalTarget !== null) return removalTarget;
+
+      const highestOpen = getHighestOpenCardIndex(player);
+
+      if (
+        highestOpen !== null &&
+        player.board[highestOpen].value > candidateValue
+      ) {
+        return highestOpen;
+      }
+
+      const hiddenTarget = getRandomHiddenCardIndex(player);
+      if (hiddenTarget !== null) return hiddenTarget;
+
+      return highestOpen;
+    }
+
+    function getSmartRevealTarget(player) {
+      const hiddenIndexes = player.board
+        .map((c, i) => ({ c, i }))
+        .filter(x => !x.c.open && !x.c.removed)
+        .map(x => x.i);
+
+      if (!hiddenIndexes.length) return null;
+
+      for (let col = 0; col < 4; col++) {
+        const indexes = [col, col + 4, col + 8];
+
+        const openValues = indexes
+          .map(i => player.board[i])
+          .filter(c => c.open && !c.removed)
+          .map(c => c.value);
+
+        if (
+          openValues.length === 2 &&
+          openValues[0] === openValues[1]
+        ) {
+          const hiddenInColumn = indexes.find(i => {
+            const c = player.board[i];
+            return !c.open && !c.removed;
+          });
+
+          if (hiddenInColumn !== undefined) {
+            return hiddenInColumn;
+          }
+        }
+      }
+
+      return hiddenIndexes[Math.floor(Math.random() * hiddenIndexes.length)];
+    }
+
     function aiTurn() {
       if (locked || gameOver || current === 0) return;
 
@@ -1136,6 +1248,21 @@
         .sort((a, b) => b.c.value - a.c.value);
 
       setTimeout(() => {
+        const discardRemovalTarget = findRemovalTarget(ai, discardValue);
+
+        if (discardRemovalTarget !== null) {
+          drawnCard = discard.pop();
+
+          animateFromTo({
+            fromEl: discardPile,
+            toEl: getCardElement(aiIndex, discardRemovalTarget),
+            value: drawnCard,
+            onDone: () => aiSwap(aiIndex, discardRemovalTarget)
+          });
+
+          return;
+        }
+
         if (discardValue <= 3 && openCards.length && openCards[0].c.value > discardValue) {
           drawnCard = discard.pop();
 
@@ -1150,17 +1277,20 @@
         }
 
         if (discardValue <= 1 && hidden.length) {
-          const target = hidden[Math.floor(Math.random() * hidden.length)].i;
-          drawnCard = discard.pop();
+          const target = getBestAIReplaceTarget(ai, discardValue);
 
-          animateFromTo({
-            fromEl: discardPile,
-            toEl: getCardElement(aiIndex, target),
-            value: drawnCard,
-            onDone: () => aiSwap(aiIndex, target)
-          });
+          if (target !== null) {
+            drawnCard = discard.pop();
 
-          return;
+            animateFromTo({
+              fromEl: discardPile,
+              toEl: getCardElement(aiIndex, target),
+              value: drawnCard,
+              onDone: () => aiSwap(aiIndex, target)
+            });
+
+            return;
+          }
         }
 
         if (!deck.length) {
@@ -1176,35 +1306,54 @@
           hidden: true,
           revealAtEnd: true,
           onDone: () => {
+            const drawnRemovalTarget = findRemovalTarget(ai, drawn);
+
+            if (drawnRemovalTarget !== null) {
+              drawnCard = drawn;
+
+              animateFromTo({
+                fromEl: drawnBox,
+                toEl: getCardElement(aiIndex, drawnRemovalTarget),
+                value: drawnCard,
+                onDone: () => aiSwap(aiIndex, drawnRemovalTarget)
+              });
+
+              return;
+            }
+
             if (drawn <= 3) {
               drawnCard = drawn;
 
-              const target = openCards.length && openCards[0].c.value > drawn
-                ? openCards[0].i
-                : hidden.length
-                  ? hidden[Math.floor(Math.random() * hidden.length)].i
-                  : openCards[0].i;
+              const target = getBestAIReplaceTarget(ai, drawn);
 
-              animateFromTo({
-                fromEl: drawnBox,
-                toEl: getCardElement(aiIndex, target),
-                value: drawnCard,
-                onDone: () => aiSwap(aiIndex, target)
-              });
-            } else {
-              discard.push(drawn);
+              if (target !== null) {
+                animateFromTo({
+                  fromEl: drawnBox,
+                  toEl: getCardElement(aiIndex, target),
+                  value: drawnCard,
+                  onDone: () => aiSwap(aiIndex, target)
+                });
 
-              animateFromTo({
-                fromEl: drawnBox,
-                toEl: discardPile,
-                value: drawn,
-                fadeOut: true,
-                onDone: () => {
-                  if (hidden.length) {
-                    const target = hidden[Math.floor(Math.random() * hidden.length)].i;
+                return;
+              }
+            }
+
+            discard.push(drawn);
+
+            animateFromTo({
+              fromEl: drawnBox,
+              toEl: discardPile,
+              value: drawn,
+              fadeOut: true,
+              onDone: () => {
+                if (hidden.length) {
+                  const target = getSmartRevealTarget(ai);
+
+                  if (target !== null) {
                     ai.board[target].open = true;
 
                     const targetEl = getCardElement(aiIndex, target);
+
                     flipCard(targetEl, () => {
                       log(`${ai.name} trok blind, legde ${drawn} af en draaide een kaart open.`);
                       afterMove();
@@ -1213,9 +1362,12 @@
                     log(`${ai.name} legde ${drawn} af.`);
                     afterMove();
                   }
+                } else {
+                  log(`${ai.name} legde ${drawn} af.`);
+                  afterMove();
                 }
-              });
-            }
+              }
+            });
           }
         });
       }, 450);
@@ -1267,8 +1419,18 @@
         });
       }
 
+      for (const p of players) {
+        let changed = true;
+
+        while (changed) {
+          const removed = clearColumns(p);
+          changed = removed.length > 0;
+        }
+      }
+
       const scores = players.map(finalScore);
       const min = Math.min(...scores);
+
       const winners = players
         .map((p, i) => ({ name: p.name, score: scores[i] }))
         .filter(p => p.score === min)
